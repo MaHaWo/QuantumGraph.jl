@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QuantumGravPy Repository Overview</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;line-height:1.45;margin:0;color:#1f2937;background:#f8fafc}main{max-width:1180px;margin:0 auto;padding:32px}section{background:white;border:1px solid #e5e7eb;border-radius:12px;padding:22px;margin:18px 0;box-shadow:0 1px 2px #0001}h1,h2,h3{color:#111827}code,pre{background:#f3f4f6;border-radius:6px}code{padding:2px 5px}pre{padding:14px;overflow:auto}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}.card{border:1px solid #e5e7eb;border-radius:10px;padding:14px;background:#fbfdff}ul{padding-left:1.25rem}.risk{border-left:4px solid #f59e0b}.ok{border-left:4px solid #10b981}.path{font-family:ui-monospace,Menlo,monospace;color:#2563eb}.small{color:#6b7280;font-size:.92em}</style>
+</head>
+<body><main>
+<h1>QuantumGravPy Repository Overview</h1>
+<p>Python package for graph neural networks used in causal-set/quantum-gravity experiments. The central flow is: YAML config with custom tags → zarr causal-set data → PyTorch Geometric <code>Data</code> objects → configurable GNN model → training/evaluation/checkpointing → optional Optuna tuning.</p>
+
+<section><h2>Tech stack</h2>
+<ul>
+<li><b>Language/package:</b> Python 3.12+, hatchling build backend, src-layout package <code>QuantumGrav</code>.</li>
+<li><b>ML/GNN:</b> PyTorch, PyTorch Geometric, torch.distributed/DDP.</li>
+<li><b>Data:</b> zarr LocalStore, NumPy, pandas, PyYAML, joblib parallelism.</li>
+<li><b>Config/validation:</b> JSON Schema via <code>jsonschema</code>, custom PyYAML tags <code>!pyobject</code>, <code>!sweep</code>, <code>!coupled-sweep</code>, <code>!range</code>, <code>!random_uniform</code>, <code>!reference</code>.</li>
+<li><b>Tuning:</b> Optuna with JournalStorage/RDBStorage and MedianPruner.</li>
+<li><b>Testing/docs:</b> pytest, pytest-cov, mkdocs-material, mkdocstrings, mkdocs-jupyter.</li>
+</ul>
+<p><b>Dominant paradigms:</b> object-oriented configurable components for models/trainers/evaluators; PyTorch module composition for numerics; YAML-driven dependency injection; unit-test-heavy pytest coverage using synthetic zarr fixtures.</p>
+</section>
+
+<section><h2>Repository structure</h2>
+<div class="grid">
+<div class="card"><h3><span class="path">src/QuantumGrav/</span></h3><p>Package root and public API. Exports dataset, GNN model, trainers, evaluators, early stopping, config helpers, zarr loaders, and <code>models</code> subpackage.</p></div>
+<div class="card"><h3><span class="path">src/QuantumGrav/models/</span></h3><p>Reusable neural network blocks: <code>GNNBlock</code>, <code>LinearSequential</code>, <code>SkipConnection</code>.</p></div>
+<div class="card"><h3><span class="path">src/QuantumGrav/QGTune/</span></h3><p>Optuna search-space construction, reference resolution, study creation, and best-config export.</p></div>
+<div class="card"><h3><span class="path">test/</span></h3><p>Unit tests and synthetic fixtures for config, datasets, models, training/DDP, evaluation, tuning, and utility helpers.</p></div>
+<div class="card"><h3><span class="path">docs/</span></h3><p>MkDocs user documentation: getting started, datasets, models, training, tuning, API.</p></div>
+</div>
+</section>
+
+<section><h2>Class and function diagram</h2>
+<pre class="mermaid">classDiagram
+    class Configurable {
+      &lt;&lt;ABC&gt;&gt;
+      from_config(config)
+      to_config()
+    }
+    class QGDatasetBase {
+      input output data_reader
+      _get_num_samples_per_file(filepath)
+      process_chunk(store,start,pre_transform,pre_filter)
+      processed_dir
+    }
+    class QGDataset {
+      write_data(data,idx)
+      process()
+      map_index(idx)
+      get(idx)
+      len()
+    }
+    class ModuleWrapper {
+      fn
+      forward(*args,**kwargs)
+      get_fn()
+    }
+    class GNNModel {
+      encoder downstream_tasks active_tasks
+      get_embeddings(x,edge_index,batch)
+      compute_downstream_tasks(x)
+      forward(x,edge_index,batch)
+      save(path)
+      load(path,config)
+    }
+    class GNNBlock {
+      conv normalizer activation skip dropout
+      forward(x,edge_index,**kwargs)
+      from_config(config)
+      to_config()
+    }
+    class SkipConnection {
+      proj
+      forward(x_old,x)
+      from_config(config)
+      to_config()
+    }
+    class LinearSequential {
+      layers
+      forward(x)
+      save(path)
+      load(path)
+    }
+    class Evaluator {
+      criterion tasks data
+      evaluate(model,data_loader)
+      report(data)
+      to_state_dict()
+    }
+    class Validator { validate(model,data_loader) }
+    class Tester { test(model,data_loader) }
+    class DefaultEarlyStopping {
+      tasks patience mode
+      __call__(data)
+      reset(index)
+      found_better_model
+    }
+    class Trainer {
+      config model optimizer validator tester
+      initialize_model()
+      prepare_dataloaders()
+      run_training(train_loader,val_loader)
+      run_test(test_loader)
+      save_checkpoint()
+    }
+    class TrainerDDP {
+      rank world_size
+      initialize_model()
+      prepare_dataloaders()
+    }
+    class ConfigHandler {
+      config run_configs
+      _extract_sweep_dims()
+      _construct_run_configs()
+    }
+    Configurable <|.. GNNModel
+    Configurable <|.. GNNBlock
+    Configurable <|.. SkipConnection
+    Configurable <|.. LinearSequential
+    Configurable <|.. Trainer
+    Configurable <|.. Evaluator
+    Configurable <|.. DefaultEarlyStopping
+    QGDatasetBase <|-- QGDataset
+    Dataset <|-- QGDataset
+    torch_nn_Module <|-- GNNModel
+    torch_nn_Module <|-- GNNBlock
+    torch_nn_Module <|-- SkipConnection
+    torch_nn_Module <|-- LinearSequential
+    Evaluator <|-- Validator
+    Evaluator <|-- Tester
+    Trainer <|-- TrainerDDP
+    GNNBlock o-- SkipConnection
+    GNNModel o-- ModuleWrapper
+    GNNModel o-- GNNBlock
+    GNNModel o-- LinearSequential
+    Trainer o-- QGDataset
+    Trainer o-- GNNModel
+    Trainer o-- Validator
+    Trainer o-- Tester
+    Trainer o-- DefaultEarlyStopping</pre>
+</section>
+
+<section><h2>Module diagram</h2>
+<pre class="mermaid">flowchart LR
+    YAML[Config YAML + custom tags] --> CU[config_utils.ConfigHandler/get_loader]
+    YAML --> Tune[QGTune.tune]
+    Tune --> Optuna[Optuna Study/Trial]
+    CU --> Trainer[train.Trainer]
+    Trainer --> Dataset[dataset_ondisk.QGDataset]
+    Zarr[(Zarr LocalStore causal-set arrays)] --> Dataset
+    Dataset --> Data[torch_geometric.data.Data]
+    Trainer --> Model[gnn_model.GNNModel]
+    Model --> Blocks[models.GNNBlock/LinearSequential/SkipConnection]
+    Data --> Trainer
+    Trainer --> Eval[evaluate.Validator/Tester]
+    Eval --> Metrics[pandas DataFrame metrics]
+    Eval --> ES[early_stopping.DefaultEarlyStopping]
+    Trainer --> CKPT[(torch .pt checkpoints + config.yaml)]
+    TrainerDDP[train_ddp.TrainerDDP] --> Trainer
+    TrainerDDP --> DDP[torch.distributed + DDP]
+    Docs[docs + mkdocs.yml] -.documents.-> CU
+    Tests[test/*] -.exercise.-> Dataset
+    Tests -.exercise.-> Model
+    Tests -.exercise.-> Trainer
+    Tests -.exercise.-> Tune</pre>
+</section>
+
+<section><h2>Key modules</h2>
+<ul>
+<li><b><span class="path">__init__.py</span>:</b> public import surface; another package can <code>import QuantumGrav as QG</code> and access trainers, datasets, evaluators, config utilities, zarr loaders, and models.</li>
+<li><b><span class="path">base.py</span>:</b> abstract <code>Configurable</code> protocol for <code>from_config</code>/<code>to_config</code>.</li>
+<li><b><span class="path">config_utils.py</span>:</b> YAML constructors, inclusive ranges, Python-object loading, sweep expansion with coupled sweep lockstep, and conversion of non-builtin values back to <code>!pyobject</code> tags.</li>
+<li><b><span class="path">dataset_base.py</span> + <span class="path">dataset_ondisk.py</span>:</b> zarr-backed dataset layer. Counts samples via <code>num_causal_sets</code>/<code>num_samples</code>, scalar-array fallback, and a Julia-zarr fallback on <code>adjacency_matrix</code>. Can preprocess chunks to <code>processed/data_*.pt</code> or lazily read per item.</li>
+<li><b><span class="path">gnn_model.py</span>:</b> dynamic model composition. Instantiates encoders, pooling/latent pathway, graph-features pathway, and multiple downstream task heads from classes/instances/callables.</li>
+<li><b><span class="path">models/</span>:</b> <code>GNNBlock</code> combines PyG convolution, normalization, activation, skip, dropout; <code>LinearSequential</code> builds linear/activation stacks; <code>SkipConnection</code> projects residuals when feature dims differ.</li>
+<li><b><span class="path">evaluate.py</span>:</b> base evaluation loop collecting losses, predictions, targets and optional monitor metrics into a pandas DataFrame. <code>Validator</code> and <code>Tester</code> specialize reporting.</li>
+<li><b><span class="path">early_stopping.py</span>:</b> metric-oriented early stopping across one or more tasks using min/max modes, deltas, grace periods, patience, and any/all aggregation.</li>
+<li><b><span class="path">train.py</span>:</b> main training orchestrator: validates config, constructs model/optimizer/scheduler/dataset/loaders, runs epochs, validation, Optuna pruning, checkpointing, and testing.</li>
+<li><b><span class="path">train_ddp.py</span>:</b> DDP extension with process-group helpers, per-rank device setup, DDP model wrapping, and DistributedSamplers.</li>
+<li><b><span class="path">QGTune/tune.py</span>:</b> turns custom YAML sweep/range/random nodes into Optuna suggestions, resolves references/coupled sweeps, creates studies, and writes best configs.</li>
+<li><b><span class="path">load_zarr.py</span>:</b> utility to recursively convert zarr groups to nested dictionaries.</li>
+</ul>
+</section>
+
+<section><h2>Entry points and reading order</h2>
+<ol>
+<li><b>Start at <span class="path">src/QuantumGrav/__init__.py</span></b> to see the public API and package boundaries.</li>
+<li>For the main runtime path, read <span class="path">src/QuantumGrav/train.py</span> around <code>Trainer.__init__</code>, <code>prepare_dataloaders</code>, <code>run_training</code>, and <code>run_test</code>.</li>
+<li>Then inspect <span class="path">src/QuantumGrav/gnn_model.py</span> to understand model composition and forward data shape expectations.</li>
+<li>For data migration or Julia interoperability, prioritize <span class="path">dataset_base.py</span>, <span class="path">dataset_ondisk.py</span>, <span class="path">test/conftest.py</span>, and docs <span class="path">docs/datasets_and_preprocessing.md</span>.</li>
+<li>For hyperparameter/config behavior, read <span class="path">config_utils.py</span> and <span class="path">QGTune/tune.py</span>.</li>
+</ol>
+</section>
+
+<section><h2>Tests and fixtures</h2>
+<p>Tests are pytest unit tests under <span class="path">test/</span>. They rely heavily on fixtures in <span class="path">test/conftest.py</span>, which create temporary zarr stores with arrays <code>adjacency_matrix</code>, <code>link_matrix</code>, <code>max_pathlen_future</code>, <code>max_pathlen_past</code>, <code>dimension</code>, <code>atomcount</code>, and sometimes <code>num_samples</code>. Reader fixtures convert dense adjacency to PyG sparse <code>edge_index</code>/<code>edge_attr</code> and build node features from path-length arrays.</p>
+<ul>
+<li><b>Config:</b> <span class="path">test_config_utils.py</span>, <span class="path">test/config.yaml</span> cover YAML custom tags and sweep expansion.</li>
+<li><b>Data/zarr:</b> <span class="path">test_datasetbase.py</span>, <span class="path">test_ondiskdataset.py</span>, <span class="path">test_load_zarr.py</span> cover zarr reading, sample counting, preprocessing, indexing, dataloaders, recursive zarr-to-dict.</li>
+<li><b>Model blocks:</b> <span class="path">test_gnn_block.py</span>, <span class="path">test_skipconnection.py</span>, <span class="path">test_linearsequential.py</span>, <span class="path">test_gnn_model.py</span> cover initialization, forward/backward, config, save/load, graph features, latent/pooling paths, arbitrary composition, active tasks.</li>
+<li><b>Training/evaluation:</b> <span class="path">test_trainer.py</span>, <span class="path">test_trainer_ddp.py</span>, <span class="path">test_evaluate.py</span>, <span class="path">test_early_stopping.py</span> cover trainer lifecycle, dataloaders, epoch loops, checkpointing, DDP setup, evaluators, and early-stopping behavior.</li>
+<li><b>Tuning/utilities:</b> <span class="path">test_tune.py</span>, <span class="path">test_utils.py</span> cover Optuna suggestions, references, study storage, best-config save, nested path helpers, dynamic imports.</li>
+</ul>
+<h3>How to run</h3>
+<pre><code>cd /Users/hmack/Development/QuantumGrav/QuantumGravPy
+python -m pytest</code></pre>
+<p>Docs can be served with:</p>
+<pre><code>cd /Users/hmack/Development/QuantumGrav/QuantumGravPy
+python -m mkdocs serve</code></pre>
+</section>
+
+<section><h2>Documentation pointers</h2>
+<ul>
+<li><span class="path">mkdocs.yml</span> defines the documentation site and nav.</li>
+<li><span class="path">docs/getting_started.md</span>, <span class="path">docs/datasets_and_preprocessing.md</span>, <span class="path">docs/models.md</span>, <span class="path">docs/training_a_model.md</span>, <span class="path">docs/hparam_tuning.md</span>, <span class="path">docs/api.md</span>.</li>
+</ul>
+</section>
+
+<section class="risk"><h2>Constraints, risks, and open questions for migration to Julia</h2>
+<ul>
+<li><b>PyTorch/PyG coupling:</b> core models and datasets depend on <code>torch.nn.Module</code>, <code>torch_geometric.data.Data</code>, PyG layers/loaders, and PyTorch checkpoint formats. A Julia port must choose equivalents (e.g. Flux/GraphNeuralNetworks.jl) or maintain an interop boundary.</li>
+<li><b>Dynamic Python object injection:</b> configs carry class/function objects via <code>!pyobject</code>. Julia migration needs a registry or explicit mapping rather than arbitrary import strings.</li>
+<li><b>Data format ambiguity:</b> zarr sample counting has multiple fallbacks and explicitly handles Python-vs-Julia zarr layout differences. Preserve this behavior and add golden zarr fixtures before changing readers.</li>
+<li><b>Model save/load:</b> GNNModel saves only <code>state_dict</code> and requires matching config; LinearSequential saves config + state_dict. Cross-language migration must define a stable serialization contract.</li>
+<li><b>Evaluator/loss signatures:</b> trainer criterion expects <code>criterion(outputs, data, trainer)</code> in training, while evaluator criterion uses <code>criterion(outputs, data)</code>. This mismatch is an important API quirk.</li>
+<li><b>DDP assumptions:</b> DDP defaults to NCCL and one process per GPU; CPU tests may not cover cluster behavior thoroughly.</li>
+<li><b>Mutable config/state:</b> ConfigHandler mutates copied configs and appends run names; early stopping mutates task dictionaries by adding runtime fields. Be careful with aliasing when porting.</li>
+<li><b>Tests use random synthetic data:</b> fixtures use random data without explicit seeding in places; exact numeric behavior is not a stable oracle.</li>
+</ul>
+</section>
+
+<section class="ok"><h2>File evidence used</h2>
+<p class="small">Key inspected ranges: <span class="path">__init__.py</span> 1-45; <span class="path">config_utils.py</span> 1-600; <span class="path">dataset_base.py</span> 1-277; <span class="path">dataset_ondisk.py</span> 1-230; <span class="path">gnn_model.py</span> 1-600; <span class="path">models/gnn_block.py</span> 1-313; <span class="path">models/linear_sequential.py</span> 1-235; <span class="path">models/skipconnection.py</span> 1-118; <span class="path">evaluate.py</span> 1-240; <span class="path">early_stopping.py</span> 1-253; <span class="path">train.py</span> 332-981; <span class="path">train_ddp.py</span> 1-376; <span class="path">QGTune/tune.py</span> 1-540; <span class="path">test/conftest.py</span> 1-310; test names via grep across <span class="path">test/*.py</span>; <span class="path">pyproject.toml</span> 1-45; <span class="path">mkdocs.yml</span> 1-46.</p>
+</section>
+</main>
+<script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs'; mermaid.initialize({startOnLoad:true,theme:'default'});</script>
+</body></html>
