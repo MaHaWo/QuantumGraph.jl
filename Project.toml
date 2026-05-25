@@ -1,0 +1,17 @@
+name = "QuantumGraph"
+uuid = "5c1c5ffa-3a8b-4a26-b46c-d7944ad1c61c"
+authors = ["QuantumGraph.jl contributors"]
+version = "0.1.0"
+
+[deps]
+Behavior = "7a129280-419d-58e9-81ef-4f6801251892"
+
+[compat]
+Behavior = "0.5"
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
