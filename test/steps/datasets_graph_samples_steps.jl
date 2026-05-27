@@ -1,5 +1,6 @@
 using Behavior
 using Zarr
+using MLUtils
 import QuantumGraph
 
 function qg_dataset_store(builder)
@@ -140,6 +141,40 @@ end
     @expect hasproperty(context[:sample], :graph)
     @expect hasproperty(context[:sample], :features)
     @expect hasproperty(context[:sample], :targets)
+end
+
+# specs/datasets-graph-samples.feature
+# Scenario: Dataset supports the MLUtils and Flux dataloader interface
+@given("a valid dataset contains multiple graph samples") do context
+    context[:dataset] = QuantumGraph.construct_dataset(qg_graph_store(4))
+end
+
+# specs/datasets-graph-samples.feature
+# Scenario: Dataset supports the MLUtils and Flux dataloader interface
+@when("a MLUtils-compatible dataloader is constructed for the dataset") do context
+    context[:dataloader] = QuantumGraph.dataset_dataloader(context[:dataset]; batchsize = 2, shuffle = false, collate = false)
+end
+
+# specs/datasets-graph-samples.feature
+# Scenario: Dataset supports the MLUtils and Flux dataloader interface
+@then("MLUtils.numobs reports the dataset sample count") do context
+    @expect MLUtils.numobs(context[:dataset]) == length(context[:dataset]) == 4
+end
+
+# specs/datasets-graph-samples.feature
+# Scenario: Dataset supports the MLUtils and Flux dataloader interface
+@then("MLUtils.getobs retrieves a single graph sample by index") do context
+    sample = MLUtils.getobs(context[:dataset], 1)
+    @expect hasproperty(sample, :graph)
+    @expect hasproperty(sample, :features)
+end
+
+# specs/datasets-graph-samples.feature
+# Scenario: Dataset supports the MLUtils and Flux dataloader interface
+@then("the dataloader yields mini-batches without eager preprocessing of all samples") do context
+    batch = first(context[:dataloader])
+    @expect length(batch) == 2
+    @expect context[:dataset].stores[1].arrays["adjacency_matrix"] isa Zarr.ZArray
 end
 
 # specs/datasets-graph-samples.feature

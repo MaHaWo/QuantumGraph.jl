@@ -31,6 +31,14 @@ Feature: Dataset layer and GraphNeuralNetworks-compatible graph samples
     And graph structure, node or graph features, and task targets are available through documented fields or accessors
 
   @datasets @approved
+  Scenario: Dataset supports the MLUtils and Flux dataloader interface
+    Given a valid dataset contains multiple graph samples
+    When a MLUtils-compatible dataloader is constructed for the dataset
+    Then MLUtils.numobs reports the dataset sample count
+    And MLUtils.getobs retrieves a single graph sample by index
+    And the dataloader yields mini-batches without eager preprocessing of all samples
+
+  @datasets @approved
   Scenario: Dataset rejects missing reader or unsupported store layout
     Given a dataset is configured with a missing reader function or unsupported Zarr layout
     When the dataset attempts to read a sample

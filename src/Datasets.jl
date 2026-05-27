@@ -1,9 +1,12 @@
+import MLUtils
+
 export DatasetError,
     QuantumGraphDataset,
     dataset_sample_count,
     construct_dataset,
     map_dataset_index,
-    read_dataset_sample
+    read_dataset_sample,
+    dataset_dataloader
 
 """
     DatasetError(operation::String, detail::String, message::String)
@@ -39,6 +42,8 @@ end
 
 Base.length(dataset::QuantumGraphDataset) = isempty(dataset.counts) ? 0 : sum(dataset.counts)
 Base.getindex(dataset::QuantumGraphDataset, index::Integer) = read_dataset_sample(dataset, index)
+MLUtils.numobs(dataset::QuantumGraphDataset) = length(dataset)
+MLUtils.getobs(dataset::QuantumGraphDataset, index::Integer) = read_dataset_sample(dataset, index)
 
 function _array_scalar(value)
     if value isa Zarr.ZArray
@@ -191,3 +196,13 @@ function read_dataset_sample(dataset::QuantumGraphDataset, index::Integer)
         throw(DatasetError("read dataset sample", string(index), sprint(showerror, err)))
     end
 end
+
+"""
+    dataset_dataloader(dataset::QuantumGraphDataset; kwargs...)
+
+Construct an `MLUtils.DataLoader` for a `QuantumGraphDataset`.
+
+This is the dataset/training handoff used by Flux-compatible training loops,
+since Flux re-exports the MLUtils data loading interface.
+"""
+dataset_dataloader(dataset::QuantumGraphDataset; kwargs...) = MLUtils.DataLoader(dataset; kwargs...)
