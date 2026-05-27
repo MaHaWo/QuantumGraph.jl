@@ -5,6 +5,7 @@ include("ZarrLoading.jl")
 include("Config.jl")
 include("Datasets.jl")
 include("Models.jl")
+include("GNNModel.jl")
 
 """
     dummy()
