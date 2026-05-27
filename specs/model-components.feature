@@ -7,15 +7,15 @@ Feature: Reusable graph model components
     Given exact Flux.jl or GraphNeuralNetworks.jl layer choices are implementation details
     And model component behavior is specified through public construction, shape, and metadata contracts
 
-  @approved
+  @models @approved
   Scenario: A configurable component validates required construction fields
     Given a model component configuration omits a required dimension, activation, or graph operator field
     When QuantumGraph constructs the component from configuration
-    Then construction fails
+    Then component construction fails
     And the error identifies the missing configuration field
     And no partially constructed component is returned as successful
 
-  @approved
+  @models @approved
   Scenario: A reusable block preserves batch and feature structure
     Given a reusable model block is constructed from valid configuration
     And compatible graph input with node or graph features is available
@@ -24,7 +24,7 @@ Feature: Reusable graph model components
     And the output feature dimension matches the configured output dimension
     And exact stochastic parameter values are not part of the behavior contract
 
-  @approved
+  @models @approved
   Scenario: Residual or skip connections handle matching dimensions directly
     Given a reusable block is configured with a residual or skip connection
     And the input and output feature dimensions match
@@ -32,7 +32,7 @@ Feature: Reusable graph model components
     Then the residual or skip path contributes to the block output
     And no projection layer is required by the public behavior
 
-  @approved
+  @models @approved
   Scenario: Residual or skip connections reject incompatible dimensions without a projection policy
     Given a reusable block is configured with a residual or skip connection
     And the skip path is incompatible with the input and output dimensions of the skipped-over model block
@@ -41,10 +41,10 @@ Feature: Reusable graph model components
     Then the operation fails with a clear dimension compatibility error
     And the error identifies the residual or skip connection configuration and the skipped-over block dimensions
 
-  @approved
+  @models @approved
   Scenario: Component metadata round-trips structural configuration
     Given a reusable model component has been constructed from configuration
-    When its public metadata is saved and loaded
+    When the component's public metadata is saved and loaded
     Then the loaded metadata preserves the component type, dimensions, activation choice, and graph-operator role
     And exact learned parameter values are not required for this metadata round trip
     And the metadata can be used to reconstruct an equivalent component structure

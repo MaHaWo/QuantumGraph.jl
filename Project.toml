@@ -5,11 +5,13 @@ authors = ["QuantumGraph.jl contributors"]
 
 [deps]
 Behavior = "7a129280-419d-58e9-81ef-4f6801251892"
+Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
 MLUtils = "f1d291b0-491e-4a28-83b9-f70985020b54"
 Zarr = "0a941bbe-ad1d-11e8-39d9-ab76183a1d99"
 
 [compat]
 Behavior = "0.5"
+Flux = "0.16.10"
 MLUtils = "0.4.8"
 Zarr = "0.10.0"
 julia = "1"
