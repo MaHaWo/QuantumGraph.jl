@@ -1,6 +1,7 @@
 module QuantumGraph
 
 include("Interfaces.jl")
+include("ZarrLoading.jl")
 
 """
     dummy()

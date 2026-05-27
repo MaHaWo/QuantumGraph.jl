@@ -1,21 +1,25 @@
 using Behavior
+using Zarr
+import QuantumGraph
 
 const QG_ZARR_ROOT = abspath(joinpath(@__DIR__, "..", ".."))
 const QG_ZARR_PROJECT = joinpath(QG_ZARR_ROOT, "Project.toml")
 
 qg_zarr_project_text() = isfile(QG_ZARR_PROJECT) ? read(QG_ZARR_PROJECT, String) : ""
+qg_zarr_import!() = QuantumGraph
 
-function qg_zarr_exports()
-    try
-        @eval import QuantumGraph
-        return Set(String.(names(QuantumGraph; all = false, imported = false)))
-    catch
-        return Set{String}()
-    end
+function qg_make_zarr_store(builder)
+    path = joinpath(mktempdir(), "fixture.zarr")
+    root = Zarr.zgroup(path)
+    builder(root)
+    path
 end
 
-qg_zarr_has(patterns::Vector{Regex}) = any(name -> any(pattern -> occursin(pattern, name), patterns), qg_zarr_exports())
-qg_zarr_requires(patterns) = @expect qg_zarr_has(patterns)
+function qg_zarr_create_array(group, name, values; chunks = size(values))
+    array = Zarr.zcreate(eltype(values), group, name, size(values)...; chunks = chunks)
+    array[:] = values
+    array
+end
 
 # specs/zarr-loading.feature
 # Background: Given Zarr.jl is a public QuantumGraph dependency for Zarr store access
@@ -34,49 +38,65 @@ end
 # specs/zarr-loading.feature
 # Scenario: Recursive loading preserves group and array structure
 @given("a Zarr store contains nested groups and array leaves") do context
-    context[:zarr_structure] = Dict(:group => Dict(:array => [1, 2, 3]))
+    context[:zarr_path] = qg_make_zarr_store() do root
+        nested = Zarr.zgroup(root, "nested")
+        Zarr.zgroup(root, "empty")
+        qg_zarr_create_array(nested, "array", [1, 2, 3])
+    end
 end
 
 # specs/zarr-loading.feature
 # Scenario: Recursive loading preserves group and array structure
 @when("QuantumGraph recursively loads the store") do context
-    qg_zarr_requires([r"zarr"i, r"load"i, r"recursive"i])
+    qg = qg_zarr_import!()
+    context[:loaded_zarr] = qg.recursive_load_zarr_store(context[:zarr_path])
 end
 
 # specs/zarr-loading.feature
 # Scenario: Recursive loading preserves group and array structure
 @then("each Zarr group is represented as a nested Julia mapping") do context
-    qg_zarr_requires([r"zarr"i, r"group"i, r"mapping"i])
+    @expect context[:loaded_zarr] isa AbstractDict
+    @expect context[:loaded_zarr]["nested"] isa AbstractDict
 end
 
 # specs/zarr-loading.feature
 # Scenario: Recursive loading preserves group and array structure
 @then("each Zarr array leaf is represented as a Julia array-compatible value") do context
-    qg_zarr_requires([r"zarr"i, r"array"i])
+    @expect context[:loaded_zarr]["nested"]["array"] == [1, 2, 3]
 end
 
 # specs/zarr-loading.feature
 # Scenario: Recursive loading preserves group and array structure
 @then("empty groups are preserved as empty mappings") do context
-    qg_zarr_requires([r"zarr"i, r"empty"i, r"group"i])
+    @expect context[:loaded_zarr]["empty"] isa AbstractDict
+    @expect isempty(context[:loaded_zarr]["empty"])
 end
 
 # specs/zarr-loading.feature
 # Scenario: Approved fixture arrays can be read without Python imports
 @given("a Python-produced Zarr fixture contains adjacency_matrix, link_matrix, and dimension arrays") do context
     context[:fixture_arrays] = ["adjacency_matrix", "link_matrix", "dimension"]
+    context[:zarr_path] = qg_make_zarr_store() do root
+        qg_zarr_create_array(root, "adjacency_matrix", reshape(collect(1:8), 2, 2, 2); chunks = (1, 2, 2))
+        qg_zarr_create_array(root, "link_matrix", reshape(collect(1:12), 2, 2, 3); chunks = (1, 2, 3))
+        qg_zarr_create_array(root, "dimension", [4, 5]; chunks = (1,))
+    end
 end
 
 # specs/zarr-loading.feature
 # Scenario: Approved fixture arrays can be read without Python imports
 @when("QuantumGraph reads the fixture through Zarr.jl") do context
-    qg_zarr_requires([r"zarr"i, r"read"i, r"fixture"i])
+    qg = qg_zarr_import!()
+    context[:loaded_zarr] = qg.recursive_load_zarr_store(context[:zarr_path])
 end
 
 # specs/zarr-loading.feature
 # Scenario: Approved fixture arrays can be read without Python imports
 @then("the arrays are available to Julia code") do context
-    qg_zarr_requires([r"zarr"i, r"array"i, r"read"i])
+    for name in context[:fixture_arrays]
+        @expect haskey(context[:loaded_zarr], name)
+        @expect context[:loaded_zarr][name] isa AbstractArray
+    end
 end
 
 # specs/zarr-loading.feature
@@ -88,95 +108,120 @@ end
 # specs/zarr-loading.feature
 # Scenario: Approved fixture arrays can be read without Python imports
 @then("array names match the names stored in the Zarr fixture") do context
-    qg_zarr_requires([r"zarr"i, r"array"i, r"name"i])
+    @expect all(name -> haskey(context[:loaded_zarr], name), context[:fixture_arrays])
 end
 
 # specs/zarr-loading.feature
 # Scenario: Missing store paths fail with a user-visible path error
 @given("a requested Zarr store path does not exist") do context
-    context[:missing_zarr_path] = joinpath(QG_ZARR_ROOT, "does-not-exist.zarr")
+    context[:missing_zarr_path] = joinpath(mktempdir(), "does-not-exist.zarr")
 end
 
 # specs/zarr-loading.feature
 # Scenario: Missing store paths fail with a user-visible path error
 @when("QuantumGraph attempts to open the store") do context
-    qg_zarr_requires([r"zarr"i, r"open"i])
+    qg = qg_zarr_import!()
+    try
+        context[:opened_zarr] = qg.open_zarr_store(context[:missing_zarr_path])
+    catch err
+        context[:zarr_error] = err
+    end
 end
 
 # specs/zarr-loading.feature
 # Scenario: Missing store paths fail with a user-visible path error
 @then("loading fails") do context
-    qg_zarr_requires([r"zarr"i, r"error"i])
+    @expect haskey(context, :zarr_error)
 end
 
 # specs/zarr-loading.feature
 # Scenario: Missing store paths fail with a user-visible path error
 @then("the error identifies the missing store path") do context
-    qg_zarr_requires([r"zarr"i, r"path"i, r"error"i])
+    message = sprint(showerror, context[:zarr_error])
+    @expect occursin(context[:missing_zarr_path], message)
+    @expect occursin(r"missing|path"i, message)
 end
 
 # specs/zarr-loading.feature
 # Scenario: Missing store paths fail with a user-visible path error
 @then("no empty dataset is returned as if loading succeeded") do context
-    qg_zarr_requires([r"zarr"i, r"load"i, r"error"i])
+    @expect !haskey(context, :opened_zarr)
 end
 
 # specs/zarr-loading.feature
 # Scenario: Unsupported store layouts are rejected at the loading boundary
 @given("a Zarr store is present but does not expose the approved group or array structure") do context
-    context[:unsupported_layout] = true
+    context[:zarr_path] = qg_make_zarr_store() do root
+        qg_zarr_create_array(root, "unexpected", [1, 2, 3])
+    end
 end
 
 # specs/zarr-loading.feature
 # Scenario: Unsupported store layouts are rejected at the loading boundary
 @when("QuantumGraph loads the store for dataset construction") do context
-    qg_zarr_requires([r"zarr"i, r"dataset"i, r"load"i])
+    qg = qg_zarr_import!()
+    try
+        context[:lazy_zarr] = qg.open_zarr_for_dataset(context[:zarr_path]; required_arrays = ["adjacency_matrix"])
+    catch err
+        context[:zarr_error] = err
+    end
 end
 
 # specs/zarr-loading.feature
 # Scenario: Unsupported store layouts are rejected at the loading boundary
 @then("loading fails with an unsupported-layout error") do context
-    qg_zarr_requires([r"zarr"i, r"layout"i, r"error"i])
+    @expect haskey(context, :zarr_error)
+    @expect occursin(r"unsupported layout"i, sprint(showerror, context[:zarr_error]))
 end
 
 # specs/zarr-loading.feature
 # Scenario: Unsupported store layouts are rejected at the loading boundary
 @then("the error identifies the unexpected group or array entry") do context
-    qg_zarr_requires([r"zarr"i, r"unexpected"i, r"entry"i])
+    @expect occursin("adjacency_matrix", sprint(showerror, context[:zarr_error]))
 end
 
 # specs/zarr-loading.feature
 # Scenario: Unsupported store layouts are rejected at the loading boundary
 @then("dataset construction does not continue with malformed data") do context
-    qg_zarr_requires([r"dataset"i, r"malformed"i, r"error"i])
+    @expect !haskey(context, :lazy_zarr)
 end
 
 # specs/zarr-loading.feature
 # Scenario: Lazy array access does not materialize all samples during store opening
 @given("a Zarr store contains sample-indexed graph arrays") do context
-    context[:sample_indexed_arrays] = true
+    context[:zarr_path] = qg_make_zarr_store() do root
+        qg_zarr_create_array(root, "adjacency_matrix", reshape(collect(1:8), 2, 2, 2); chunks = (1, 2, 2))
+        qg_zarr_create_array(root, "dimension", [4, 5]; chunks = (1,))
+    end
 end
 
 # specs/zarr-loading.feature
 # Scenario: Lazy array access does not materialize all samples during store opening
 @when("QuantumGraph opens the store for dataset use") do context
-    qg_zarr_requires([r"zarr"i, r"open"i, r"dataset"i])
+    qg = qg_zarr_import!()
+    context[:lazy_zarr] = qg.open_zarr_for_dataset(context[:zarr_path]; required_arrays = ["adjacency_matrix", "dimension"])
 end
 
 # specs/zarr-loading.feature
 # Scenario: Lazy array access does not materialize all samples during store opening
 @then("opening the store records array handles or equivalent lazy accessors") do context
-    qg_zarr_requires([r"zarr"i, r"lazy"i, r"access"i])
+    @expect context[:lazy_zarr] isa qg_zarr_import!().LazyZarrStore
+    @expect context[:lazy_zarr].arrays["adjacency_matrix"] isa Zarr.ZArray
 end
 
 # specs/zarr-loading.feature
 # Scenario: Lazy array access does not materialize all samples during store opening
 @then("sample arrays are not fully materialized until a sample is requested") do context
-    qg_zarr_requires([r"lazy"i, r"sample"i, r"array"i])
+    @expect !(context[:lazy_zarr].arrays["adjacency_matrix"] isa Array)
 end
 
 # specs/zarr-loading.feature
 # Scenario: Lazy array access does not materialize all samples during store opening
 @then("requesting one sample reads only the arrays needed for that sample") do context
-    qg_zarr_requires([r"sample"i, r"read"i, r"array"i])
+    qg = qg_zarr_import!()
+    sample = qg.read_zarr_sample(context[:lazy_zarr], ["adjacency_matrix", "dimension"], 1)
+    @expect haskey(sample, "adjacency_matrix")
+    @expect haskey(sample, "dimension")
+    @expect sample["dimension"] == 4
+    @expect size(sample["adjacency_matrix"]) == (2, 2)
 end

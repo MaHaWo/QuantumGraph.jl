@@ -1,13 +1,15 @@
 name = "QuantumGraph"
 uuid = "5c1c5ffa-3a8b-4a26-b46c-d7944ad1c61c"
-authors = ["QuantumGraph.jl contributors"]
 version = "0.1.0"
+authors = ["QuantumGraph.jl contributors"]
 
 [deps]
 Behavior = "7a129280-419d-58e9-81ef-4f6801251892"
+Zarr = "0a941bbe-ad1d-11e8-39d9-ab76183a1d99"
 
 [compat]
 Behavior = "0.5"
+Zarr = "0.10.0"
 julia = "1"
 
 [extras]
