@@ -9,6 +9,7 @@ Feature: Single-machine training and Optuna-backed tuning workflow boundary
     And checkpoint artifacts use a Julia-native format
     And distributed or multi-machine training is outside the current scope
 
+  @approved
   Scenario: Trainer initializes from a resolved configuration
     Given a resolved training configuration contains dataset, model, optimizer, scheduler, evaluator, early stopping, and output path settings
     When the trainer is constructed
@@ -16,6 +17,7 @@ Feature: Single-machine training and Optuna-backed tuning workflow boundary
     And it prepares the configured components without starting training
     And invalid configuration sections are reported with clear errors
 
+  @approved
   Scenario: Training runs on one machine with at most one accelerator
     Given a trainer is configured for CPU or one available accelerator
     When training starts
@@ -23,6 +25,7 @@ Feature: Single-machine training and Optuna-backed tuning workflow boundary
     And it does not advertise or initialize multi-machine training
     And unsupported accelerator settings fail with clear backend errors
 
+  @approved
   Scenario: Training writes structural artifacts
     Given a trainer completes a deterministic fixture run
     When output artifacts are inspected
@@ -31,12 +34,14 @@ Feature: Single-machine training and Optuna-backed tuning workflow boundary
     And validation or test reports are written with DataFrame-compatible schemas
     And exact stochastic loss or metric values are not required
 
+  @approved
   Scenario: Training rejects checkpoint write failures
     Given the configured checkpoint output path cannot be written
     When training attempts to save a checkpoint
     Then training fails with an error identifying the checkpoint write failure
     And the failure is not reported as a successful training run
 
+  @approved
   Scenario: Tuning uses Optuna.jl as the preferred backend candidate
     Given a tuning configuration defines search-space distributions, references, coupled sweeps, study settings, and trial limits
     When QuantumGraph constructs the tuning workflow
@@ -44,6 +49,7 @@ Feature: Single-machine training and Optuna-backed tuning workflow boundary
     And QuantumGraph exposes backend-neutral tuning concepts for study, trial, suggestion, objective result, and best configuration
     And unsupported Optuna.jl capabilities are reported as explicit backend limitations
 
+  @approved
   Scenario: Tuning exports the best configuration using approved YAML semantics
     Given a tuning study has completed at least one successful trial
     When the best configuration is exported
