@@ -7,6 +7,7 @@ Feature: Migration compatibility and deferred distributed behavior
     Given QuantumGraph is a single-machine Julia library
     And distributed or multi-machine training is outside the current public surface
 
+  @approved
   Scenario: Distributed training APIs are not advertised as supported
     Given a downstream user reads the migration compatibility documentation
     When they inspect the supported execution modes
@@ -14,6 +15,7 @@ Feature: Migration compatibility and deferred distributed behavior
     And DDP, multi-node, or cluster training is documented as deferred or unsupported
     And no public API is described as a supported distributed training entry point
 
+  @approved
   Scenario: Distributed training requests fail with an intentional deferral error
     Given a workflow configuration requests DDP, multi-node, or distributed training
     When QuantumGraph validates the training configuration
@@ -21,6 +23,7 @@ Feature: Migration compatibility and deferred distributed behavior
     And the error identifies distributed training as outside the current scope
     And the error is not reported as an unrelated missing field or backend crash
 
+  @approved
   Scenario: Julia-native checkpoints are documented as the supported checkpoint format
     Given a downstream user reads the checkpoint compatibility notes
     When they inspect supported checkpoint artifact types
@@ -28,6 +31,7 @@ Feature: Migration compatibility and deferred distributed behavior
     And Python Torch checkpoint compatibility is documented as deferred, unsupported, or requiring explicit conversion
     And the documentation identifies which artifacts can be migrated directly
 
+  @approved
   Scenario: Unsupported legacy checkpoint inputs fail clearly
     Given a workflow is configured to load an unsupported legacy checkpoint artifact
     When QuantumGraph validates the checkpoint input
@@ -35,6 +39,7 @@ Feature: Migration compatibility and deferred distributed behavior
     And the error identifies the unsupported checkpoint artifact type
     And the error points users toward the documented compatibility boundary
 
+  @approved
   Scenario: Compatibility documentation is reachable from public package documentation
     Given the README or package documentation is available
     When a downstream user looks for migration compatibility information

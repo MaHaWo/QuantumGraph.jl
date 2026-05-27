@@ -7,6 +7,7 @@ Feature: Optional single-accelerator device behavior
     Given CPU execution is always supported by QuantumGraph
     And accelerator execution is optional and limited to at most one configured accelerator
 
+  @approved
   Scenario: CPU execution is selected when no accelerator is requested
     Given a training or model workflow does not request an accelerator
     When QuantumGraph prepares the execution device
@@ -14,6 +15,7 @@ Feature: Optional single-accelerator device behavior
     And no CUDA or accelerator backend initialization is required
     And training can proceed without distributed process setup
 
+  @approved
   Scenario: One available accelerator can be selected explicitly
     Given a workflow requests one available accelerator
     When QuantumGraph prepares the execution device
@@ -21,6 +23,7 @@ Feature: Optional single-accelerator device behavior
     And model and graph batch values are prepared for that device through public APIs
     And no additional accelerator or multi-process setup is initialized
 
+  @approved
   Scenario: Unavailable accelerator requests fail clearly
     Given a workflow requests an accelerator that is not available
     When QuantumGraph prepares the execution device
@@ -28,6 +31,7 @@ Feature: Optional single-accelerator device behavior
     And the error identifies the requested accelerator setting
     And the error explains that the requested backend or device is unavailable
 
+  @approved
   Scenario: Multiple accelerator requests are rejected
     Given a workflow requests more than one accelerator
     When QuantumGraph validates the execution device settings
@@ -35,6 +39,7 @@ Feature: Optional single-accelerator device behavior
     And the error identifies that only one accelerator is supported
     And no partial multi-accelerator setup is attempted
 
+  @approved
   Scenario: Device movement preserves graph sample and model structure
     Given a model and GraphNeuralNetworks-compatible graph batch are available
     When QuantumGraph prepares them for the selected CPU or accelerator device
