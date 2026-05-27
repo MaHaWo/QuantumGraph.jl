@@ -7,7 +7,7 @@ Feature: Configuration parsing and object resolution boundary
     Given QuantumGraph is used as an importable Julia library
     And configuration behavior is scoped to Julia equivalents rather than Python object imports
 
-  @approved
+  @config @approved
   Scenario: Custom YAML tags are parsed into Julia configuration values
     Given a YAML configuration containing !sweep, !coupled-sweep, !range, !random_uniform, !reference, and !pyobject-equivalent tags
     When the configuration is loaded by QuantumGraph
@@ -15,7 +15,7 @@ Feature: Configuration parsing and object resolution boundary
     And the resulting Julia configuration preserves the tag's approved behavior
     And unsupported or malformed tags produce user-visible configuration errors
 
-  @approved
+  @config @approved
   Scenario: Range expansion preserves inclusive range semantics
     Given a configuration range with a start, stop, and nonzero step
     When the range is expanded
@@ -23,7 +23,7 @@ Feature: Configuration parsing and object resolution boundary
     And include the stop value when it lies on the step sequence
     And a zero step is rejected with an error identifying the range step
 
-  @approved
+  @config @approved
   Scenario: Sweep expansion creates one run configuration per selected value
     Given a configuration contains a sweep over multiple values
     When the configuration is expanded
@@ -31,7 +31,7 @@ Feature: Configuration parsing and object resolution boundary
     And each run configuration contains the selected value at the target path
     And run naming preserves the approved suffix behavior without requiring Python naming conventions
 
-  @approved
+  @config @approved
   Scenario: Coupled sweeps reject mismatched lengths
     Given a configuration contains a coupled sweep with differently sized value lists
     When the configuration is expanded
@@ -39,14 +39,14 @@ Feature: Configuration parsing and object resolution boundary
     And the error identifies the coupled sweep length mismatch
     And no partial run configuration is accepted as successful
 
-  @approved
+  @config @approved
   Scenario: References resolve previously defined configuration paths
     Given a configuration value references another configuration path
     When the configuration is resolved
     Then the reference is replaced by the referenced value
     And a missing referenced path is rejected with an error identifying the missing path
 
-  @approved
+  @config @approved
   Scenario: Julia object registry replaces Python object imports
     Given a configuration contains a !pyobject-equivalent object reference
     When the configuration is resolved
@@ -54,7 +54,7 @@ Feature: Configuration parsing and object resolution boundary
     And unresolved registry modules or names fail with clear errors
     And no Python import is required for normal Julia object resolution
 
-  @approved
+  @config @approved
   Scenario: Configurable objects can round-trip their configuration metadata
     Given a QuantumGraph object supports construction from configuration
     When the object is serialized back to configuration metadata
