@@ -13,7 +13,7 @@ Migrate the full QuantumGravPy Python library at `/Users/hmack/Development/Quant
 - Compatibility priority: YAML config and Zarr stores highest; training/evaluation artifacts, tuning outputs, and checkpoints must be planned explicitly.
 - CUDA: important and must be planned/tested.
 - DDP: deferred initially.
-- Testing: BDD specs first, then Julia tests; characterization tests are the oracle; no direct blind port of Python tests.
+- Testing: BDD specs first, then executable Behavior.jl step definitions plus a separate native Julia test surface. Leaf nodes require unit tests; integration nodes require integration tests. Characterization tests are the oracle; no direct blind port of Python tests.
 - Numeric policy: structural and functional equivalence only for now; exact Torch/PyG-to-Julia numeric tolerances are not required.
 
 ## Target Repository Layout
@@ -39,29 +39,40 @@ QuantumGraph.jl/
 │   ├── Training.jl
 │   ├── CUDADevice.jl
 │   └── Tuning.jl
+├── specs/
+│   ├── package-test-harness.feature
+│   ├── interfaces-registry-utils.feature
+│   ├── config-object-resolution.feature
+│   ├── zarr-loading.feature
+│   ├── datasets-graph-samples.feature
+│   ├── model-components.feature
+│   ├── gnn-model-boundary.feature
+│   ├── evaluation-early-stopping.feature
+│   ├── training-tuning-workflows.feature
+│   ├── cuda-device.feature
+│   ├── migration-compatibility.feature
+│   └── public-library-surface.feature
 ├── test/
 │   ├── runtests.jl
-│   ├── bdd/
-│   │   ├── config.feature
-│   │   ├── zarr_dataset.feature
-│   │   ├── model_components.feature
-│   │   ├── gnn_model.feature
-│   │   ├── evaluation_early_stopping.feature
-│   │   ├── training.feature
-│   │   └── tuning.feature
+│   ├── steps/
+│   │   └── *_steps.jl
 │   ├── fixtures/
 │   │   ├── configs/
 │   │   └── zarr/
-│   └── unit/
-│       ├── test_config.jl
-│       ├── test_zarr_loading.jl
-│       ├── test_datasets.jl
-│       ├── test_models.jl
-│       ├── test_gnn_model.jl
-│       ├── test_evaluation.jl
-│       ├── test_early_stopping.jl
-│       ├── test_training.jl
-│       └── test_tuning.jl
+│   ├── unit/
+│   │   ├── test_package_test_harness.jl
+│   │   ├── test_interfaces_registry_utils.jl
+│   │   └── test_zarr_loading.jl
+│   └── integration/
+│       ├── test_config_object_resolution.jl
+│       ├── test_datasets_graph_samples.jl
+│       ├── test_model_components.jl
+│       ├── test_gnn_model_boundary.jl
+│       ├── test_evaluation_early_stopping.jl
+│       ├── test_training_tuning_workflows.jl
+│       ├── test_cuda_device.jl
+│       ├── test_migration_compatibility.jl
+│       └── test_public_library_surface.jl
 ├── docs/
 └── artifacts/
 ```
@@ -164,34 +175,37 @@ Serialization/deserialization ownership:
    - File: `/Users/hmack/Development/QuantumGraph.jl/Project.toml`
    - File: `/Users/hmack/Development/QuantumGraph.jl/src/QuantumGraph.jl`
    - File: `/Users/hmack/Development/QuantumGraph.jl/test/runtests.jl`
-   - Changes: define package metadata, GPL-3.0 license reference, dependency placeholders/compat strategy, module include structure, and BDD/test directories.
-   - Acceptance: `julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.test()'` runs an empty or skeleton test suite; package imports as a library and exposes no CLI.
+   - Changes: define package metadata, GPL-3.0 license reference, dependency placeholders/compat strategy, module include structure, `specs/`, `test/steps/`, `test/unit/`, and `test/integration/` directories.
+   - node_type: `leaf`
+   - dependency_interfaces: Julia `Pkg`/`Test` package entry points; Behavior.jl runner paths (`specs/` and `test/steps/`); no in-migration dependency interfaces.
+   - Acceptance criteria: Behavior.jl spec `specs/package-test-harness.feature` passes; native unit test `test/unit/test_package_test_harness.jl` verifies package import, test harness wiring, and absence of CLI entry points; `julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.test()'` runs the skeleton suite.
    - Boundary: Independent.
 
 2. **Define common interfaces and registry contracts**: Implement abstract config/serialization interfaces and object registry design before module internals.
    - File: `/Users/hmack/Development/QuantumGraph.jl/src/Interfaces.jl`
    - File: `/Users/hmack/Development/QuantumGraph.jl/src/Utils.jl`
    - Changes: define `from_config`/`to_config`-style conventions, nested path helpers, registry lookup interface for `!pyobject` equivalents, and error conventions.
-   - Acceptance: BDD spec for object lookup and nested path behavior; tests cover characterization C011-C013.
+   - node_type: `leaf`
+   - dependency_interfaces: Julia `Dict`/module namespace lookup semantics; registry API consumed by Config, Models, and Training; no in-migration child dependency.
+   - Acceptance criteria: Behavior.jl spec `specs/interfaces-registry-utils.feature` and step definitions pass; native unit test `test/unit/test_interfaces_registry_utils.jl` covers characterization C011-C013, nested paths, registry lookup failures, and object-resolution error messages.
    - Boundary: Independent after Task 1.
 
 3. **Implement BDD specification set before Julia behavior tests**: Write feature files that express approved behavior boundaries module-by-module.
-   - File: `/Users/hmack/Development/QuantumGraph.jl/test/bdd/config.feature`
-   - File: `/Users/hmack/Development/QuantumGraph.jl/test/bdd/zarr_dataset.feature`
-   - File: `/Users/hmack/Development/QuantumGraph.jl/test/bdd/model_components.feature`
-   - File: `/Users/hmack/Development/QuantumGraph.jl/test/bdd/gnn_model.feature`
-   - File: `/Users/hmack/Development/QuantumGraph.jl/test/bdd/evaluation_early_stopping.feature`
-   - File: `/Users/hmack/Development/QuantumGraph.jl/test/bdd/training.feature`
-   - File: `/Users/hmack/Development/QuantumGraph.jl/test/bdd/tuning.feature`
-   - Changes: convert characterization behaviors C001-C028 and requirements into BDD scenarios with explicit non-numeric structural assertions.
-   - Acceptance: BDD review confirms coverage of each migration module before corresponding Julia tests are implemented.
+   - File: `/Users/hmack/Development/QuantumGraph.jl/specs/*.feature`
+   - File: `/Users/hmack/Development/QuantumGraph.jl/test/steps/*_steps.jl`
+   - Changes: convert characterization behaviors C001-C028 and requirements into BDD scenarios with explicit non-numeric structural assertions, dependency-interface coverage sections, and executable Behavior.jl step definitions.
+   - node_type: `integration`
+   - dependency_interfaces: Behavior.jl feature grammar and step definition API; module interface contracts from this plan; characterization IDs C001-C028 as traceability inputs.
+   - Acceptance criteria: every module has an approved `.feature` file under `specs/`; every scenario has step definitions under `test/steps/`; each feature states dependency-interface coverage or `none`; BDD review confirms coverage before native unit/integration tests are implemented.
    - Boundary: Sequential after Task 1; can run in parallel with Task 2 if interface names are stable.
 
 4. **Migrate configuration parsing and sweep expansion**: Preserve YAML tag behavior and config expansion semantics.
    - File: `/Users/hmack/Development/QuantumGraph.jl/src/Config.jl`
    - File: `/Users/hmack/Development/QuantumGraph.jl/test/unit/test_config.jl`
    - Changes: support custom tags, inclusive ranges, load-time random sampling semantics, references, sweep/coupled-sweep expansion, model-name suffix behavior, YAML serialization where needed.
-   - Acceptance: BDD `config.feature` passes; Julia tests cover C004-C010 and config portions of C007-C009; bad-object and length-mismatch errors are explicit.
+   - node_type: `integration`
+   - dependency_interfaces: Interfaces/Utils registry and nested-path contract from Task 2; Julia YAML parser tag-extension API; Julia `Random` semantics for non-exact random sampling.
+   - Acceptance criteria: Behavior.jl spec `specs/config-object-resolution.feature` passes; native integration test `test/integration/test_config_object_resolution.jl` covers C004-C010 and config portions of C007-C009, including bad-object and length-mismatch errors; tests verify compliance with the registry dependency interface.
    - Boundary: Sequential after Tasks 2 and 3.
    - Open validation: choose Julia YAML parser/tag extension strategy; exact NumPy random values are not required.
 
@@ -200,7 +214,9 @@ Serialization/deserialization ownership:
    - File: `/Users/hmack/Development/QuantumGraph.jl/test/unit/test_zarr_loading.jl`
    - File: `/Users/hmack/Development/QuantumGraph.jl/test/fixtures/zarr/`
    - Changes: implement recursive Zarr group-to-dictionary loading and establish golden structural fixtures from Python characterization data.
-   - Acceptance: BDD Zarr scenarios pass; tests cover C014 and verify empty groups and array leaf loading.
+   - node_type: `leaf`
+   - dependency_interfaces: Zarr.jl store/group/array read API; Python-created Zarr v2 layout compatibility; Julia array conversion semantics.
+   - Acceptance criteria: Behavior.jl spec `specs/zarr-loading.feature` passes; native unit test `test/unit/test_zarr_loading.jl` covers C014, empty groups, array leaf loading, unsupported layouts, and Python-created fixture compatibility.
    - Boundary: Independent after Task 1; depends only on package/test harness.
    - Open validation: confirm `Zarr.jl` can read all existing store layouts; if not, plan compatibility shim.
 
@@ -208,7 +224,9 @@ Serialization/deserialization ownership:
    - File: `/Users/hmack/Development/QuantumGraph.jl/src/Datasets.jl`
    - File: `/Users/hmack/Development/QuantumGraph.jl/test/unit/test_datasets.jl`
    - Changes: implement sample counting precedence, input validation, lazy indexing, map-index behavior, reader function contract, and conversion to graph data suitable for `GraphNeuralNetworks.jl`.
-   - Acceptance: BDD dataset scenarios pass; tests cover C015-C017 using fixture Zarr stores.
+   - node_type: `integration`
+   - dependency_interfaces: ZarrLoading recursive dictionary contract from Task 5; GraphNeuralNetworks.jl graph sample representation; MLUtils.jl dataset/indexing expectations if used by training.
+   - Acceptance criteria: Behavior.jl spec `specs/datasets-graph-samples.feature` passes; native integration test `test/integration/test_datasets_graph_samples.jl` covers C015-C017 using fixture Zarr stores, graph sample shape/field contracts, map-index errors, and DataLoader-compatible indexing.
    - Boundary: Sequential after Task 5; depends on graph data representation decision.
    - Open validation: define exact Julia graph sample type and batching interface compatible with `GraphNeuralNetworks.jl`.
 
@@ -216,7 +234,9 @@ Serialization/deserialization ownership:
    - File: `/Users/hmack/Development/QuantumGraph.jl/src/Models.jl`
    - File: `/Users/hmack/Development/QuantumGraph.jl/test/unit/test_models.jl`
    - Changes: implement `LinearSequential`, `SkipConnection`, and `GNNBlock` equivalents with config construction/serialization and registered activation/normalizer/conv resolution.
-   - Acceptance: BDD model component scenarios pass; tests cover C018-C020 for structure, shape, config save/load, skip projection behavior.
+   - node_type: `integration`
+   - dependency_interfaces: Interfaces registry contract from Task 2; Flux.jl layer/callable/functor behavior; GraphNeuralNetworks.jl convolution constructor and graph data API; graph sample contract agreed with Task 6.
+   - Acceptance criteria: Behavior.jl spec `specs/model-components.feature` passes; native integration test `test/integration/test_model_components.jl` covers C018-C020 for structure, shape, config save/load, skip projection behavior, registered activation/normalizer/conv resolution, and graph convolution interface compliance.
    - Boundary: Sequential after Tasks 2, 3; can proceed in parallel with Task 6 once graph sample representation is agreed.
    - Open validation: map PyG conv/normalizer classes to GraphNeuralNetworks.jl/Flux equivalents.
 
@@ -224,7 +244,9 @@ Serialization/deserialization ownership:
    - File: `/Users/hmack/Development/QuantumGraph.jl/src/GNNModel.jl`
    - File: `/Users/hmack/Development/QuantumGraph.jl/test/unit/test_gnn_model.jl`
    - Changes: implement config-driven composition, task key activation/deactivation, embedding path behavior, save/load metadata.
-   - Acceptance: BDD GNN model scenarios pass; tests cover C021-C022 with output keys/shapes and invalid config failures.
+   - node_type: `integration`
+   - dependency_interfaces: Datasets graph sample/batch contract from Task 6; Models callable/config contract from Task 7; Flux.jl callable model semantics; stable output-key convention for downstream tasks.
+   - Acceptance criteria: Behavior.jl spec `specs/gnn-model-boundary.feature` passes; native integration test `test/integration/test_gnn_model_boundary.jl` covers C021-C022 with output keys/shapes, invalid config failures, active/inactive task filtering, embedding paths, and compliance with dataset/model dependency interfaces.
    - Boundary: Sequential after Tasks 6 and 7.
    - Open validation: preserve no-pooling/no-latent behavior boundary as intentional unless BDD review flags ambiguity.
 
@@ -234,7 +256,9 @@ Serialization/deserialization ownership:
    - File: `/Users/hmack/Development/QuantumGraph.jl/test/unit/test_evaluation.jl`
    - File: `/Users/hmack/Development/QuantumGraph.jl/test/unit/test_early_stopping.jl`
    - Changes: implement evaluator/validator/tester schema, criterion call adapters, task metrics, early stopping state/grace/patience logic.
-   - Acceptance: BDD evaluation/early stopping scenarios pass; tests cover C023-C024, including empty data error.
+   - node_type: `integration`
+   - dependency_interfaces: Interfaces/config conventions from Task 2; Tables.jl/DataFrames.jl-compatible report schema; criterion callable interface; GNNModel output dictionary contract when integrated after Task 8.
+   - Acceptance criteria: Behavior.jl spec `specs/evaluation-early-stopping.feature` passes; native integration test `test/integration/test_evaluation_early_stopping.jl` covers C023-C024, empty data errors, report table schema, metric aggregation, and early-stopping state transitions.
    - Boundary: Sequential after Tasks 2 and 3; evaluation integration with models depends on Task 8.
    - Open validation: choose DataFrames.jl or a lighter table abstraction.
 
@@ -242,7 +266,9 @@ Serialization/deserialization ownership:
     - File: `/Users/hmack/Development/QuantumGraph.jl/src/Tuning.jl`
     - File: `/Users/hmack/Development/QuantumGraph.jl/test/unit/test_tuning.jl`
     - Changes: implement search-space conversion, reference/coupled-sweep resolution, study/trial abstraction, best-config YAML export.
-    - Acceptance: BDD tuning scenarios pass; tests reflect existing `test_tune.py` behaviors and characterization gaps.
+    - node_type: `integration`
+    - dependency_interfaces: Config sweep/reference/coupled-sweep contract from Task 4; backend-neutral trial suggestion interface; Julia YAML emit semantics for best-config export.
+    - Acceptance criteria: Behavior.jl tuning scenarios in `specs/training-tuning-workflows.feature` pass; native integration test `test/integration/test_training_tuning_workflows.jl` covers tuning-specific `test_tune.py` behaviors, characterization gaps, mocked trial suggestions, reference/coupled-sweep compliance, and best-config YAML export.
     - Boundary: Sequential after Task 4; independent of model/training internals if trial abstraction is mocked.
     - Open validation: identify Julia Optuna-equivalent or create backend-neutral tuning interface; ensure existing Optuna outputs are either read or explicitly migrated.
 
@@ -250,7 +276,9 @@ Serialization/deserialization ownership:
     - File: `/Users/hmack/Development/QuantumGraph.jl/src/Training.jl`
     - File: `/Users/hmack/Development/QuantumGraph.jl/test/unit/test_training.jl`
     - Changes: implement trainer initialization, dataloader preparation, structural train loop, validation/test calls, optimizer/scheduler construction, checkpoint/report writing.
-    - Acceptance: BDD training scenarios pass; tests cover C025 structurally: file inventory, report schemas, config copies, deterministic fixture execution. No exact stochastic metrics.
+    - node_type: `integration`
+    - dependency_interfaces: Config run-config contract from Task 4; Datasets/MLUtils DataLoader contract from Task 6; GNNModel callable/output contract from Task 8; Evaluation/EarlyStopping report/state contract from Task 9; Flux/Optimisers optimizer and scheduler APIs; filesystem artifact schema.
+    - Acceptance criteria: Behavior.jl training scenarios in `specs/training-tuning-workflows.feature` pass; native integration test `test/integration/test_training_tuning_workflows.jl` covers C025 structurally: file inventory, report schemas, config copies, deterministic fixture execution, optimizer/scheduler construction, and compliance with config/dataset/model/evaluation dependency interfaces. No exact stochastic metrics.
     - Boundary: Sequential after Tasks 4, 6, 8, 9.
     - Open validation: checkpoint format must be Julia-native unless Python Torch compatibility is explicitly feasible.
 
@@ -258,7 +286,9 @@ Serialization/deserialization ownership:
     - File: `/Users/hmack/Development/QuantumGraph.jl/src/CUDADevice.jl`
     - File: `/Users/hmack/Development/QuantumGraph.jl/test/unit/test_training.jl`
     - Changes: design device selection and GPU transfer contracts for data/model/training; gate GPU tests by availability.
-    - Acceptance: CPU tests always pass; CUDA smoke tests pass on available CUDA environment; no DDP requirement.
+    - node_type: `integration`
+    - dependency_interfaces: CUDA.jl device availability and array transfer API; Flux.jl GPU adaptation; GraphNeuralNetworks.jl graph data GPU support; dataset/model/training contracts from Tasks 6, 8, and 11.
+    - Acceptance criteria: Behavior.jl spec `specs/cuda-device.feature` passes; native integration test `test/integration/test_cuda_device.jl` always passes CPU/no-CUDA behavior and runs gated CUDA smoke assertions when CUDA is available; tests verify no DDP requirement.
     - Boundary: Sequential after Tasks 6, 8, 11.
     - Open validation: Flux.jl + GraphNeuralNetworks.jl CUDA support and `Enzyme.jl` compatibility.
 
@@ -266,7 +296,9 @@ Serialization/deserialization ownership:
     - File: `/Users/hmack/Development/QuantumGraph.jl/docs/migration_compatibility.md`
     - File: `/Users/hmack/Development/QuantumGraph.jl/test/unit/test_training.jl`
     - Changes: document DDP deferral, Torch checkpoint limitations/conversion strategy, and artifact compatibility support matrix.
-    - Acceptance: documentation lists supported/deferred artifact types; tests assert DDP APIs are absent/deferred intentionally rather than partially broken.
+    - node_type: `integration`
+    - dependency_interfaces: Training artifact inventory from Task 11; public export surface from Task 14 when finalized; documentation/test convention for intentionally absent APIs.
+    - Acceptance criteria: Behavior.jl spec `specs/migration-compatibility.feature` passes; native integration test `test/integration/test_migration_compatibility.jl` verifies documentation lists supported/deferred artifact types, DDP APIs are absent/deferred intentionally, and checkpoint compatibility limits are explicit rather than partially broken.
     - Boundary: Sequential after Task 11.
 
 14. **Assemble public exports and documentation**: Expose stable Julia library surface and package docs.
@@ -274,13 +306,17 @@ Serialization/deserialization ownership:
     - File: `/Users/hmack/Development/QuantumGraph.jl/README.md`
     - File: `/Users/hmack/Development/QuantumGraph.jl/docs/`
     - Changes: export/import module surface, document usage analogous to Python examples, update compatibility notes.
-    - Acceptance: BDD public library surface scenarios pass; downstream sample import works; no CLI is introduced.
+    - node_type: `integration`
+    - dependency_interfaces: stable public APIs from Config, ZarrLoading, Datasets, Models, GNNModel, Evaluation, EarlyStopping, Training, CUDADevice, and Tuning; Julia module export/import semantics; README/docs examples.
+    - Acceptance criteria: Behavior.jl spec `specs/public-library-surface.feature` passes; native integration test `test/integration/test_public_library_surface.jl` verifies exports, sample import/use, docs examples where practical, and absence of CLI entry points.
     - Boundary: Sequential after Tasks 4-11; docs can draft earlier but final export must wait.
 
 15. **Full migration verification**: Run the complete Julia test suite against characterization-derived fixtures and behavior specs.
     - File: `/Users/hmack/Development/QuantumGraph.jl/test/runtests.jl`
-    - Changes: ensure all unit and BDD-derived tests run in CI/local commands; record commands in README or docs.
-    - Acceptance: `julia --project=. -e 'using Pkg; Pkg.test()'` passes; Python oracle tests still pass in source with `.venv/bin/pytest test -q`; every major behavior C001-C028 is mapped to a passing Julia test, documented deferral, or accepted non-numeric structural equivalent.
+    - Changes: ensure all Behavior.jl BDD specs, step definitions, native unit tests, and native integration tests run in CI/local commands; record commands in README or docs.
+    - node_type: `integration`
+    - dependency_interfaces: package-level `Pkg.test` contract; Behavior.jl runner; native Julia `Test` unit/integration suites; Python pytest oracle in the source repository.
+    - Acceptance criteria: `julia --project=. -e 'using Pkg; Pkg.test()'` passes and runs BDD plus native unit/integration suites; Python oracle tests still pass in source with `.venv/bin/pytest test -q`; every major behavior C001-C028 is mapped to a passing Julia test, documented deferral, or accepted non-numeric structural equivalent.
     - Boundary: Sequential after all implementation modules.
 
 ## Implementation Dependency Tree
@@ -399,8 +435,10 @@ pytest test -q
 ```
 
 BDD workflow:
-- Write/review `.feature` files first.
-- Convert approved scenarios to Julia tests under `test/unit/` or BDD runner glue if a Julia BDD runner is selected.
+- Write/review `.feature` files under `specs/` first.
+- Convert approved scenarios to executable Behavior.jl step definitions under `test/steps/`.
+- Add the separate native Julia test surface required by each node type: unit tests under `test/unit/` for leaf nodes and integration tests under `test/integration/` for integration nodes.
+- Native tests must verify each module's `dependency_interfaces` explicitly; do not rely on BDD scenarios alone for interface compatibility.
 - Structural tests should assert schemas, keys, shapes, artifact inventory, and deterministic fixture behavior.
 - Do not require exact stochastic loss/metric values or Torch/PyG numeric equivalence.
 
@@ -408,7 +446,7 @@ BDD workflow:
 - `/Users/hmack/Development/QuantumGraph.jl/Project.toml` - Julia package metadata, dependencies, test targets, GPL-3.0 metadata.
 - `/Users/hmack/Development/QuantumGraph.jl/README.md` - library usage, migration compatibility notes, test commands.
 - `/Users/hmack/Development/QuantumGraph.jl/src/QuantumGraph.jl` - root module and public exports.
-- `/Users/hmack/Development/QuantumGraph.jl/test/runtests.jl` - test harness that runs BDD-derived and unit tests.
+- `/Users/hmack/Development/QuantumGraph.jl/test/runtests.jl` - test harness that runs Behavior.jl specs, step definitions, native unit tests, and native integration tests.
 
 ## New Files
 - `/Users/hmack/Development/QuantumGraph.jl/src/Interfaces.jl` - config/serialization and registry interface contracts.
@@ -423,8 +461,10 @@ BDD workflow:
 - `/Users/hmack/Development/QuantumGraph.jl/src/Training.jl` - single-process trainer.
 - `/Users/hmack/Development/QuantumGraph.jl/src/CUDADevice.jl` - CUDA/device selection contract.
 - `/Users/hmack/Development/QuantumGraph.jl/src/Tuning.jl` - sweep/reference/search-space and best-config export.
-- `/Users/hmack/Development/QuantumGraph.jl/test/bdd/*.feature` - BDD specs for each module.
-- `/Users/hmack/Development/QuantumGraph.jl/test/unit/*.jl` - Julia behavior tests derived from BDD specs.
+- `/Users/hmack/Development/QuantumGraph.jl/specs/*.feature` - BDD specs for each module.
+- `/Users/hmack/Development/QuantumGraph.jl/test/steps/*_steps.jl` - Behavior.jl executable step definitions for approved BDD specs.
+- `/Users/hmack/Development/QuantumGraph.jl/test/unit/*.jl` - native Julia unit tests for leaf nodes.
+- `/Users/hmack/Development/QuantumGraph.jl/test/integration/*.jl` - native Julia integration tests for integration nodes.
 - `/Users/hmack/Development/QuantumGraph.jl/test/fixtures/configs/` - YAML config fixtures.
 - `/Users/hmack/Development/QuantumGraph.jl/test/fixtures/zarr/` - Python-created Zarr fixtures.
 - `/Users/hmack/Development/QuantumGraph.jl/docs/migration_compatibility.md` - artifact compatibility, DDP deferral, checkpoint strategy.
