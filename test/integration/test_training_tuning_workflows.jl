@@ -3,6 +3,7 @@ using QuantumGraph
 using DataFrames
 using Flux
 using Optimisers
+using Optuna
 
 @testset "Training orchestration integration contract" begin
     tmp = mktempdir()
@@ -150,4 +151,76 @@ using Optimisers
     @test early_stopping_grace_state(early_trainer.early_stopping) == 1
     @test length(early_trainer.early_stopping_decisions) == 2
     @test isfile(current_best_checkpoint_path(early_trainer))
+end
+
+@testset "Tuning utilities integration contract" begin
+    @test preferred_tuning_backend() == :Optuna
+    @test :study in backend_neutral_tuning_concepts()
+    @test :trial in backend_neutral_tuning_concepts()
+    limitations = unsupported_optuna_capabilities()
+    @test limitations.backend == :Optuna
+    @test !isempty(limitations.limitations)
+
+    @test is_flat_list(["relu", "tanh"])
+    @test !is_flat_list([[1, 2]])
+    @test is_categorical_suggestion([16, 32, 64])
+    @test is_float_suggestion((0.001, 0.1, 0.001))
+    @test is_float_suggestion((1e-5, 1e-1, true))
+    @test is_int_suggestion((1, 3, 1))
+
+    config = Dict{Any, Any}(
+        "model" => Dict{Any, Any}(
+            "layers" => Dict("type" => "sweep", "values" => [1, 2]),
+            "width" => Dict("type" => "coupled-sweep", "target" => ["model", "layers"], "values" => [16, 32]),
+            "activation" => Dict("type" => "sweep", "values" => ["relu", "tanh"]),
+            "lr" => Dict("type" => "range", "tune_values" => (0.001, 0.1, 0.001)),
+        ),
+        "trainer" => Dict{Any, Any}(
+            "epochs" => Dict("type" => "range", "tune_values" => (1, 3, 1)),
+            "copied_width" => Dict("type" => "reference", "target" => ["model", "layers"]),
+        ),
+    )
+    trial = FixedTrial(Dict{String, Any}(
+        "model.layers" => 2,
+        "model.activation" => "tanh",
+        "model.lr" => 0.01,
+        "trainer.epochs" => 2,
+    ))
+
+    @test get_value_of_ref(config, ["model", "layers"])["type"] == "sweep"
+    @test convert_to_suggestion("model.activation", config["model"]["activation"], trial, config) == "tanh"
+    coupled = convert_to_suggestion("model.width", config["model"]["width"], trial, config)
+    @test coupled["type"] == "coupled-sweep-mapping"
+    @test coupled["mapping"][2] == 32
+
+    suggestions, mapping = get_suggestion(config, config, trial, String[])
+    @test suggestions["model"]["layers"] == 2
+    @test suggestions["model"]["activation"] == "tanh"
+    @test suggestions["model"]["width"]["type"] == "coupled-sweep-mapping"
+    @test haskey(mapping, "model.width")
+
+    resolved = build_search_space(config, trial)
+    @test resolved["model"]["width"] == 32
+    @test resolved["trainer"]["copied_width"] == 2
+
+    bad_coupled = deepcopy(config)
+    bad_coupled["model"]["width"] = Dict("type" => "coupled-sweep", "target" => ["trainer", "epochs"], "values" => [16])
+    @test_throws TuningError convert_to_suggestion("model.width", bad_coupled["model"]["width"], trial, bad_coupled)
+
+    study = create_tuning_study(Dict("study_name" => "demo", "direction" => "minimize", "storage" => nothing))
+    @test study.study_name == "demo"
+    @test study.direction == :minimize
+    @test study.backend == :Optuna
+    @test study.study isa Optuna.Study
+    @test study.storage isa Optuna.InMemoryStorage
+    @test_throws TuningError create_tuning_study(Dict("study_name" => "demo"))
+    @test_throws TuningError create_tuning_study(Dict("study_name" => "demo", "direction" => "sideways"))
+    @test_throws TuningError create_tuning_study(Dict("study_name" => "demo", "direction" => "minimize", "storage" => "unsupported"))
+
+    out = joinpath(mktempdir(), "best_config.txt")
+    best = save_best_config(config, trial, out)
+    @test isfile(out)
+    @test best["model"]["layers"] == 2
+    @test best["model"]["width"] == 32
+    @test best["trainer"]["copied_width"] == 2
 end
