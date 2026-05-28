@@ -269,7 +269,7 @@ Serialization/deserialization ownership:
     - node_type: `integration`
     - dependency_interfaces: Config sweep/reference/coupled-sweep contract from Task 4; backend-neutral trial suggestion interface; Julia YAML emit semantics for best-config export.
     - Acceptance criteria: Behavior.jl tuning scenarios in `specs/training-tuning-workflows.feature` pass; native integration test `test/integration/test_training_tuning_workflows.jl` covers tuning-specific `test_tune.py` behaviors, characterization gaps, mocked trial suggestions, reference/coupled-sweep compliance, and best-config YAML export.
-    - Boundary: Sequential after Task 4; independent of model/training internals if trial abstraction is mocked.
+    - Boundary: Sequential after Tasks 4 and 11; training is implemented first because tuning wraps or drives training workflows.
     - Open validation: identify Julia Optuna-equivalent or create backend-neutral tuning interface; ensure existing Optuna outputs are either read or explicitly migrated.
 
 11. **Migrate single-process training orchestration**: Integrate configs, datasets, models, evaluation, early stopping, and checkpoint/report artifacts.
@@ -277,7 +277,7 @@ Serialization/deserialization ownership:
     - File: `/Users/hmack/Development/QuantumGraph.jl/test/unit/test_training.jl`
     - Changes: implement trainer initialization, dataloader preparation, structural train loop, validation/test calls, optimizer/scheduler construction, checkpoint/report writing.
     - node_type: `integration`
-    - dependency_interfaces: Config run-config contract from Task 4; Datasets/MLUtils DataLoader contract from Task 6; GNNModel callable/output contract from Task 8; Evaluation/EarlyStopping report/state contract from Task 9; Flux/Optimisers optimizer and scheduler APIs; filesystem artifact schema.
+    - dependency_interfaces: Config run-config contract from Task 4; Datasets/MLUtils DataLoader contract from Task 6; generic callable model/output contract from Task 8 or any compatible model provider; Evaluation/EarlyStopping report/state contract from Task 9; Flux/Optimisers optimizer and scheduler APIs; filesystem artifact schema.
     - Acceptance criteria: Behavior.jl training scenarios in `specs/training-tuning-workflows.feature` pass; native integration test `test/integration/test_training_tuning_workflows.jl` covers C025 structurally: file inventory, report schemas, config copies, deterministic fixture execution, optimizer/scheduler construction, and compliance with config/dataset/model/evaluation dependency interfaces. No exact stochastic metrics.
     - Boundary: Sequential after Tasks 4, 6, 8, 9.
     - Open validation: checkpoint format must be Julia-native unless Python Torch compatibility is explicitly feasible.
@@ -324,9 +324,9 @@ Serialization/deserialization ownership:
 ```text
 Root: Public QuantumGraph.jl library surface
 ├── Training/Tuning workflows
-│   ├── Training.jl [depends: Config, Datasets, GNNModel, Evaluation, EarlyStopping]
-│   │   └── CUDADevice.jl [depends: Training + graph/model device contracts]
-│   └── Tuning.jl [depends: Config]
+│   ├── Training.jl [depends: Config, Datasets, callable model, Evaluation, EarlyStopping]
+│   │   └── CUDADevice.jl [depends: Training + shallow device-transfer contract]
+│   └── Tuning.jl [depends: Config + Training workflow contract]
 ├── GNNModel.jl [depends: Datasets graph sample contract + Models]
 │   └── Models.jl [depends: Interfaces/registry]
 ├── Evaluation.jl + EarlyStopping.jl [depends: Interfaces; integrates with GNNModel later]
@@ -343,8 +343,8 @@ Detailed task dependencies:
 Task 1  Package skeleton + test harness
 ├── Task 2  Interfaces, registry, utilities
 │   ├── Task 4  Config.jl
-│   │   ├── Task 10 Tuning.jl
 │   │   ├── Task 11 Training.jl
+│   │   ├── Task 10 Tuning.jl [after Task 11]
 │   │   └── Task 14 Public exports + docs
 │   ├── Task 7  Models.jl components
 │   │   └── Task 8 GNNModel.jl composite model
@@ -366,6 +366,7 @@ Task 1  Package skeleton + test harness
         └── Task 14 Public exports + docs
 
 Task 11 Training.jl
+├── Task 10 Tuning.jl
 ├── Task 12 CUDADevice.jl + CUDA validation
 ├── Task 13 DDP/checkpoint compatibility docs
 └── Task 14 Public exports + docs
@@ -383,8 +384,8 @@ Bottom-up implementation order:
 4. Dataset layer and model components in parallel after graph representation decisions.
 5. Composite GNN model.
 6. Evaluation and early stopping.
-7. Tuning after config.
-8. Training orchestration.
+7. Training orchestration.
+8. Tuning after training workflow contract is stable.
 9. CUDA validation.
 10. Deferred compatibility documentation.
 11. Public export/docs and full verification.

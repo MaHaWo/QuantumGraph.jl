@@ -8,6 +8,7 @@ include("Models.jl")
 include("GNNModel.jl")
 include("Evaluation.jl")
 include("EarlyStopping.jl")
+include("Training.jl")
 
 function __init__()
     register_object!("QuantumGraph.DenseEncoder", default_dense_encoder)

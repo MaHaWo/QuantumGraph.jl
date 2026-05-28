@@ -35,6 +35,14 @@ Feature: Single-machine training and Optuna-backed tuning workflow boundary
     And exact stochastic loss or metric values are not required
 
   @approved
+  Scenario: Training applies early stopping after validation reports
+    Given a trainer is configured with validation and early stopping
+    When validation reports stop improving beyond patience
+    Then training stops before the maximum epoch count
+    And the early-stopping state records the best score and grace count
+    And a current-best checkpoint is written when a better score is found
+
+  @approved
   Scenario: Training rejects checkpoint write failures
     Given the configured checkpoint output path cannot be written
     When training attempts to save a checkpoint

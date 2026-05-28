@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "29973cf7817a3b462160eac4904653b699b360e7"
+project_hash = "145be2bec14a85aaddb27154b287c2902d8fe78e"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "bbc22a9a08a0ef6460041086d8a7b27940ed4ffd"
@@ -1061,7 +1061,7 @@ uuid = "43287f4e-b6f4-7ad1-bb20-aadabca52c3d"
 version = "1.4.0"
 
 [[deps.QuantumGraph]]
-deps = ["Behavior", "DataFrames", "Flux", "GraphNeuralNetworks", "MLUtils", "Statistics", "Zarr"]
+deps = ["Behavior", "DataFrames", "Flux", "GraphNeuralNetworks", "MLUtils", "Optimisers", "Serialization", "Statistics", "Zarr"]
 path = "."
 uuid = "5c1c5ffa-3a8b-4a26-b46c-d7944ad1c61c"
 version = "0.1.0"

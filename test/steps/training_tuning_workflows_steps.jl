@@ -136,6 +136,37 @@ end
 end
 
 # specs/training-tuning-workflows.feature
+# Scenario: Training applies early stopping after validation reports
+@given("a trainer is configured with validation and early stopping") do context
+    context[:training_has_early_stopping] = true
+    qg_workflow_requires([r"train"i, r"early"i, r"stop"i])
+end
+
+# specs/training-tuning-workflows.feature
+# Scenario: Training applies early stopping after validation reports
+@when("validation reports stop improving beyond patience") do context
+    qg_workflow_requires([r"valid"i, r"early"i, r"stop"i])
+end
+
+# specs/training-tuning-workflows.feature
+# Scenario: Training applies early stopping after validation reports
+@then("training stops before the maximum epoch count") do context
+    qg_workflow_requires([r"stop"i, r"epoch"i, r"train"i])
+end
+
+# specs/training-tuning-workflows.feature
+# Scenario: Training applies early stopping after validation reports
+@then("the early-stopping state records the best score and grace count") do context
+    qg_workflow_requires([r"best"i, r"grace"i, r"early"i])
+end
+
+# specs/training-tuning-workflows.feature
+# Scenario: Training applies early stopping after validation reports
+@then("a current-best checkpoint is written when a better score is found") do context
+    qg_workflow_requires([r"current"i, r"best"i, r"checkpoint"i])
+end
+
+# specs/training-tuning-workflows.feature
 # Scenario: Training rejects checkpoint write failures
 @given("the configured checkpoint output path cannot be written") do context
     context[:checkpoint_path_writable] = false
