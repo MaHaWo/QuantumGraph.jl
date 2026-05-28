@@ -1,12 +1,17 @@
 using Test
 using QuantumGraph
 using GraphNeuralNetworks
+using Statistics: mean
 
 @testset "Composite GNN model integration contract" begin
     base_config = Dict{String, Any}(
         "input_dim" => 4,
         "embedding_dim" => 3,
         "embedding_path" => "pooling",
+        "pooling" => Dict{String, Any}(
+            "type" => "QuantumGraph.GraphPool",
+            "kwargs" => Dict{String, Any}("aggregation" => mean),
+        ),
         "task_heads" => Dict{String, Any}(
             "mass" => Dict{String, Any}("output_dim" => 1),
             "dimension" => Dict{String, Any}("output_dim" => 2),
@@ -22,6 +27,21 @@ using GraphNeuralNetworks
     end
     @test missing_err isa GNNModelError
     @test occursin("missing downstream task configuration", sprint(showerror, missing_err))
+
+    no_pooling_model = construct_gnn_model(Dict(
+        "input_dim" => 4,
+        "embedding_dim" => 3,
+        "embedding_path" => "pooling",
+        "task_heads" => Dict("mass" => Dict("output_dim" => 1)),
+    ))
+    no_pooling_err = try
+        gnn_model_embedding(no_pooling_model, (graph = GNNGraph([1, 2], [2, 1]), features = ones(Float32, 4, 2)))
+        nothing
+    catch caught
+        caught
+    end
+    @test no_pooling_err isa GNNModelError
+    @test occursin("pooling path requires a configured pooling component", sprint(showerror, no_pooling_err))
 
     model = construct_gnn_model(base_config)
     @test model isa CompositeGNNModel
@@ -53,11 +73,14 @@ using GraphNeuralNetworks
     embedding = gnn_model_embedding(model, sample)
     @test size(embedding) == (3, 1)
 
-    latent_model = construct_gnn_model(merge(base_config, Dict{String, Any}(
+    latent_config = copy(base_config)
+    delete!(latent_config, "pooling")
+    merge!(latent_config, Dict{String, Any}(
         "embedding_path" => "latent",
         "use_pooling" => false,
         "use_latent" => true,
-    )))
+    ))
+    latent_model = construct_gnn_model(latent_config)
     latent_embedding = gnn_model_embedding(latent_model, ones(Float32, 4, 2))
     @test size(latent_embedding) == (3, 2)
 
@@ -99,6 +122,7 @@ using GraphNeuralNetworks
     @test configuration_metadata(model).type_identifier == "QuantumGraph.CompositeGNNModel"
 
     saved = save_gnn_model_metadata(model)
+    saved["pooling"] = saved["components"]["pooling"]
     loaded = load_gnn_model_metadata(saved)
     @test loaded isa CompositeGNNModel
     @test loaded.active_tasks == model.active_tasks

@@ -6,6 +6,14 @@ include("Config.jl")
 include("Datasets.jl")
 include("Models.jl")
 include("GNNModel.jl")
+include("Evaluation.jl")
+include("EarlyStopping.jl")
+
+function __init__()
+    register_object!("QuantumGraph.DenseEncoder", default_dense_encoder)
+    register_object!("QuantumGraph.DenseTaskHead", default_dense_task_head)
+    register_object!("QuantumGraph.GraphPool", default_graph_pool)
+end
 
 """
     dummy()

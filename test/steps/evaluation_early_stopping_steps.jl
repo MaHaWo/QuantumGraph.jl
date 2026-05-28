@@ -52,8 +52,14 @@ end
 
 # specs/evaluation-early-stopping.feature
 # Scenario: Evaluation produces the required report schema
-@then("it contains configured per-task metric columns when task metrics are provided") do context
-    qg_eval_requires([r"metric"i, r"task"i, r"column"i])
+@then("it contains configured monitor task columns when monitor tasks are provided") do context
+    qg_eval_requires([r"monitor"i, r"task"i, r"column"i])
+end
+
+# specs/evaluation-early-stopping.feature
+# Scenario: Evaluation produces the required report schema
+@then("each monitor task result is stored as returned rather than averaged by evaluation") do context
+    qg_eval_requires([r"monitor"i, r"result"i, r"report"i])
 end
 
 # specs/evaluation-early-stopping.feature
@@ -76,8 +82,14 @@ end
 
 # specs/evaluation-early-stopping.feature
 # Scenario: Evaluation calls the model with graph batch inputs
-@then("evaluation records losses and metrics from observable model outputs") do context
-    qg_eval_requires([r"loss"i, r"metric"i, r"output"i])
+@then("evaluation records losses from each batch") do context
+    qg_eval_requires([r"loss"i, r"batch"i, r"evaluat"i])
+end
+
+# specs/evaluation-early-stopping.feature
+# Scenario: Evaluation calls the model with graph batch inputs
+@then("monitor tasks receive the collected model outputs and targets after all batches are processed") do context
+    qg_eval_requires([r"monitor"i, r"output"i, r"target"i])
 end
 
 # specs/evaluation-early-stopping.feature

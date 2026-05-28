@@ -5,7 +5,7 @@ Task 8 — Composite GNN model
 
 ## Implemented
 - Added `src/GNNModel.jl` and included it from `src/QuantumGraph.jl`.
-- Added `GraphNeuralNetworks.jl` as the graph-model dependency and use `GraphNeuralNetworks.GlobalPool(mean)` for graph-level pooling. `Statistics.mean` is imported only as the aggregation function passed to `GlobalPool`.
+- Added `GraphNeuralNetworks.jl` as the graph-model dependency and exposed it through a registry-resolved pooling component constructor (`QuantumGraph.GraphPool`). The GNN model orchestrator no longer hardcodes `GlobalPool(mean)`; pooling is supplied by config as `type`/`args`/`kwargs`.
 - Implemented public composite model APIs:
   - `CompositeGNNModel`
   - `GNNModelError`
@@ -18,7 +18,7 @@ Task 8 — Composite GNN model
   - `gnn_model_metadata`
   - `save_gnn_model_metadata`
   - `load_gnn_model_metadata`
-- Implemented config-driven downstream task heads, active-task filtering, stable Symbol task identifiers, pooling/latent embedding paths, and structural metadata round-tripping.
+- Implemented config-driven encoder, pooling, and downstream task heads via registry-resolved component specs with `type`, `args`, and `kwargs`, plus active-task filtering, stable Symbol task identifiers, pooling/latent embedding paths, and structural metadata round-tripping.
 - Added native integration coverage in `test/integration/test_gnn_model_boundary.jl`.
 
 ## Acceptance criteria
@@ -51,14 +51,14 @@ Result: PASS — 106 native unit/integration assertions passed, including `test/
 
 ## Dependency interface compliance verification
 - Dataset graph sample contract: `gnn_model_embedding` accepts the approved sample shape with `graph`, `features`, `targets`, and `source` fields; the `graph` value must be GraphNeuralNetworks-compatible for the pooling path.
-- GraphNeuralNetworks pooling contract: graph-level embeddings are produced by `GraphNeuralNetworks.GlobalPool(mean)`, not by custom pooling logic.
+- GraphNeuralNetworks pooling contract: graph-level pooling is supported by the registry-resolved `QuantumGraph.GraphPool` constructor, which can build `GraphNeuralNetworks.GlobalPool` with the aggregation function provided by config. The orchestrator does not choose `mean` itself.
 - Models/Flux contract: the composite encoder and downstream heads are `Flux.Chain` values and the model is callable through `model(input)`.
 - Stable output-key contract: configured task identifiers are normalized to Julia `Symbol` keys and stored in `task_key_mapping`.
 - Metadata/config contract: public metadata is represented as `ConfigMetadata` and can reconstruct a structurally equivalent model via `load_gnn_model_metadata`.
 
 ## Decisions made
-- The current implementation uses a Flux dense encoder and dense downstream task heads as the minimal structural equivalent for the composite boundary.
-- The pooling path delegates graph-level feature aggregation to GraphNeuralNetworks.jl via `GlobalPool(mean)`. The latent path preserves per-node encoded values.
+- The current implementation provides registry-backed default Flux dense encoder and dense downstream task head constructors as minimal structural equivalents for the composite boundary.
+- The pooling path requires a configured pooling component. GraphNeuralNetworks.jl pooling is supported through `QuantumGraph.GraphPool`, but the config chooses the aggregation function. The latent path preserves per-node encoded values.
 - Task metadata records structure and active-task mapping, not learned parameter values, matching the non-numeric migration policy.
 
 ## Decisions requiring human confirmation

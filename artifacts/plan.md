@@ -255,10 +255,10 @@ Serialization/deserialization ownership:
    - File: `/Users/hmack/Development/QuantumGraph.jl/src/EarlyStopping.jl`
    - File: `/Users/hmack/Development/QuantumGraph.jl/test/unit/test_evaluation.jl`
    - File: `/Users/hmack/Development/QuantumGraph.jl/test/unit/test_early_stopping.jl`
-   - Changes: implement evaluator/validator/tester schema, criterion call adapters, task metrics, early stopping state/grace/patience logic.
+   - Changes: implement evaluator/validator/tester schema, criterion call adapters, monitor task callables, early stopping state/grace/patience logic.
    - node_type: `integration`
-   - dependency_interfaces: Interfaces/config conventions from Task 2; Tables.jl/DataFrames.jl-compatible report schema; criterion callable interface; GNNModel output dictionary contract when integrated after Task 8.
-   - Acceptance criteria: Behavior.jl spec `specs/evaluation-early-stopping.feature` passes; native integration test `test/integration/test_evaluation_early_stopping.jl` covers C023-C024, empty data errors, report table schema, metric aggregation, and early-stopping state transitions.
+   - dependency_interfaces: Interfaces/config conventions from Task 2; Tables.jl/DataFrames.jl-compatible report schema; criterion callable interface; model output collection contract when integrated after Task 8.
+   - Acceptance criteria: Behavior.jl spec `specs/evaluation-early-stopping.feature` passes; native integration test `test/integration/test_evaluation_early_stopping.jl` covers C023-C024, empty data errors, report table schema, loss aggregation, monitor tasks called once over collected outputs/targets with results stored as returned, and early-stopping state transitions.
    - Boundary: Sequential after Tasks 2 and 3; evaluation integration with models depends on Task 8.
    - Open validation: choose DataFrames.jl or a lighter table abstraction.
 

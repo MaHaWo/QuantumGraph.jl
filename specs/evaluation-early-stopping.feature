@@ -13,14 +13,16 @@ Feature: Evaluation reports and early stopping over DataFrames
     When evaluation runs over the data iterator
     Then the result is a DataFrame
     And it contains loss_avg, loss_min, and loss_max columns
-    And it contains configured per-task metric columns when task metrics are provided
+    And it contains configured monitor task columns when monitor tasks are provided
+    And each monitor task result is stored as returned rather than averaged by evaluation
 
   @approved
   Scenario: Evaluation calls the model with graph batch inputs
     Given a data iterator yields GraphNeuralNetworks-compatible graph samples or batches
     When evaluation processes a batch
     Then the model receives graph inputs through the approved graph sample boundary
-    And evaluation records losses and metrics from observable model outputs
+    And evaluation records losses from each batch
+    And monitor tasks receive the collected model outputs and targets after all batches are processed
 
   @approved
   Scenario: Evaluation rejects invalid task metric configuration
