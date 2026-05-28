@@ -8,6 +8,7 @@ include("Models.jl")
 include("GNNModel.jl")
 include("Evaluation.jl")
 include("EarlyStopping.jl")
+include("CUDADevice.jl")
 include("Training.jl")
 include("Tuning.jl")
 

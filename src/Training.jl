@@ -60,7 +60,7 @@ mutable struct Trainer
     early_stopping::Any
     output_path::String
     checkpoint_path::String
-    device::Symbol
+    device::ExecutionDevice
     prepared::Bool
     started::Bool
     epoch::Int
@@ -92,15 +92,19 @@ Validate the resolved training configuration and normalize top-level keys to
 strings.
 
 The trainer requires dataset, model, optimizer, evaluator, early-stopping, and
-output-path sections before it can prepare components. Only local CPU and the
-shallow `:accelerator` placeholder are accepted here; unsupported device strings
-fail early before any training artifacts are written.
+output-path sections before it can prepare components. Device settings are
+validated through `CUDADevice.jl`: CPU is always accepted, while CUDA requests
+must resolve to one available accelerator before artifacts are written.
 """
 function validate_training_config(config::AbstractDict)
     missing = [section for section in _required_sections() if !_cfg_has(config, section)]
     isempty(missing) || throw(TrainingError("validate training config", join(missing, ","), "missing required configuration section(s)"))
-    device = Symbol(_cfg_get(config, "device", "cpu"))
-    device in (:cpu, :accelerator) || throw(TrainingError("validate training config", "device", "unsupported accelerator backend: $device"))
+    try
+        prepare_execution_device(config)
+    catch err
+        err isa DeviceError && throw(TrainingError("validate training config", "device", sprint(showerror, err)))
+        rethrow()
+    end
     Dict{String, Any}(String(k) => v for (k, v) in config)
 end
 
@@ -192,10 +196,12 @@ function construct_trainer(config::AbstractDict)
     components = prepare_training_components(validated)
     output_path = String(validated["output_path"])
     checkpoint_path = String(_cfg_get(validated, "checkpoint_path", joinpath(output_path, "model_checkpoints")))
+    device = prepare_execution_device(validated)
+    model = prepare_model_for_device(components.model, device)
     Trainer(
         validated,
         components.dataset,
-        components.model,
+        model,
         components.optimizer,
         components.scheduler,
         nothing,
@@ -204,7 +210,7 @@ function construct_trainer(config::AbstractDict)
         components.early_stopping,
         output_path,
         checkpoint_path,
-        Symbol(_cfg_get(validated, "device", "cpu")),
+        device,
         true,
         false,
         0,
@@ -225,10 +231,13 @@ local_single_machine_training(::Trainer) = true
 
 # Device handling belongs at the trainer/batch boundary. Deeper model or dataset
 # code should not need CUDA-specific branches.
-function _move_to_device(batch, device::Symbol)
-    device == :cpu && return batch
-    device == :accelerator && return batch
-    throw(accelerator_backend_error(device))
+function _move_to_device(batch, device::ExecutionDevice)
+    try
+        return prepare_graph_batch_for_device(batch, device)
+    catch err
+        err isa DeviceError && throw(TrainingError("prepare batch device", "device", sprint(showerror, err)))
+        rethrow()
+    end
 end
 
 # Normalize a dataset-like input into an iterable batch collection for the local
@@ -453,7 +462,7 @@ optimizer callback, the scheduler hook is called, validation is evaluated, repor
 are serialized, early stopping is applied, and periodic checkpoints are written.
 """
 function run_single_machine_training!(trainer::Trainer; epochs = _cfg_get(trainer.config, "num_epochs", 1))
-    trainer.device in (:cpu, :accelerator) || throw(accelerator_backend_error(trainer.device))
+    trainer.device.backend in (:cpu, :cuda) || throw(accelerator_backend_error(trainer.device.backend))
     trainer.started = true
     write_training_config_copy(trainer)
     batches = _as_batches(trainer.dataset)

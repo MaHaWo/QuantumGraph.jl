@@ -1,5 +1,6 @@
 using Test
 using QuantumGraph
+using GraphNeuralNetworks
 import MLUtils
 
 @testset "Datasets and graph samples integration contract" begin
@@ -16,4 +17,17 @@ import MLUtils
     @test_throws DatasetError read_dataset_sample(empty_dataset, 1)
 
     @test_throws DatasetError construct_dataset(String[]; reader = nothing)
+
+    graphs = [GNNGraph([1, 2], [2, 1], ndata = (x = fill(Float32(i), 3, 2),)) for i in 1:4]
+    loader = dataset_dataloader(graphs; batchsize = 2, shuffle = false)
+    first_batch = first(loader)
+    @test first_batch isa GNNGraph
+    @test first_batch.num_graphs == 2
+    @test first_batch.num_nodes == 4
+    @test size(first_batch.ndata.x) == (3, 4)
+
+    uncollated = first(dataset_dataloader(graphs; batchsize = 2, shuffle = false, collate = false))
+    @test uncollated isa AbstractVector
+    @test length(uncollated) == 2
+    @test first(uncollated) isa GNNGraph
 end

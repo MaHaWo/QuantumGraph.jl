@@ -198,11 +198,18 @@ function read_dataset_sample(dataset::QuantumGraphDataset, index::Integer)
 end
 
 """
-    dataset_dataloader(dataset::QuantumGraphDataset; kwargs...)
+    dataset_dataloader(dataset; collate = true, kwargs...)
 
-Construct an `MLUtils.DataLoader` for a `QuantumGraphDataset`.
+Construct an `MLUtils.DataLoader` for graph-oriented training data.
 
-This is the dataset/training handoff used by Flux-compatible training loops,
-since Flux re-exports the MLUtils data loading interface.
+`MLUtils.jl` owns mini-batch construction at this boundary. By default
+`collate=true`, so a vector or dataset of `GraphNeuralNetworks.GNNGraph` samples
+is batched through `MLUtils.batch` into one batched `GNNGraph` per loader
+iteration. Callers may pass `collate=false` for non-graph fixtures or custom
+batching behavior.
+
+This keeps dataset reading lazy and simple: samples are produced individually,
+then MLUtils performs the framework-approved collation before the trainer sees a
+batch.
 """
-dataset_dataloader(dataset::QuantumGraphDataset; kwargs...) = MLUtils.DataLoader(dataset; kwargs...)
+dataset_dataloader(dataset; collate = true, kwargs...) = MLUtils.DataLoader(dataset; collate = collate, kwargs...)
