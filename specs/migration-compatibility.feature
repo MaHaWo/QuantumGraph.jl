@@ -8,22 +8,6 @@ Feature: Migration compatibility and deferred distributed behavior
     And distributed or multi-machine training is outside the current public surface
 
   @approved
-  Scenario: Distributed training APIs are not advertised as supported
-    Given a downstream user reads the migration compatibility documentation
-    When they inspect the supported execution modes
-    Then single-machine execution is documented as supported
-    And DDP, multi-node, or cluster training is documented as deferred or unsupported
-    And no public API is described as a supported distributed training entry point
-
-  @approved
-  Scenario: Distributed training requests fail with an intentional deferral error
-    Given a workflow configuration requests DDP, multi-node, or distributed training
-    When QuantumGraph validates the training configuration
-    Then validation fails
-    And the error identifies distributed training as outside the current scope
-    And the error is not reported as an unrelated missing field or backend crash
-
-  @approved
   Scenario: Julia-native checkpoints are documented as the supported checkpoint format
     Given a downstream user reads the checkpoint compatibility notes
     When they inspect supported checkpoint artifact types

@@ -49,8 +49,7 @@ Fields:
 - `available`: whether the requested backend is currently usable.
 - `requested`: original user setting retained for clear diagnostics.
 
-Only one accelerator is represented. Distributed, DDP, and multi-process device
-setup are intentionally outside this migration slice.
+Only one accelerator is represented.
 """
 struct ExecutionDevice
     backend::Symbol
@@ -111,8 +110,7 @@ single_accelerator_process_setup() = true
 """
     no_distributed_device_setup() -> Bool
 
-Return `true` because device preparation does not initialize DDP, MPI, or any
-other multi-machine process group.
+Return `true` because device preparation stays within one local process.
 """
 no_distributed_device_setup() = true
 

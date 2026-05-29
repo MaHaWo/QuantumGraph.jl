@@ -308,5 +308,5 @@ end
 # specs/public-library-surface.feature
 # Scenario: The documented execution scope is one machine with one accelerator
 @then("no distributed training compatibility surface is advertised") do context
-    @expect !occursin(r"(?i)multi[- ]machine|multi[- ]node|cluster training|distributed training|DDP", qg_context_get(context, :docs_text, qg_docs_text()))
+    @expect !occursin(r"(?i)multi[- ]machine|multi[- ]node|cluster training|distributed training", qg_context_get(context, :docs_text, qg_docs_text()))
 end

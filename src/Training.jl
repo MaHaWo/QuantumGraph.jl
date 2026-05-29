@@ -15,6 +15,9 @@ export TrainingError,
     load_julia_checkpoint,
     write_training_config_copy,
     write_training_report,
+    validate_checkpoint_input,
+    unsupported_checkpoint_error,
+    checkpoint_compatibility_error,
     training_artifact_paths,
     local_single_machine_training,
     apply_training_early_stopping!,
@@ -401,9 +404,47 @@ end
 Load a checkpoint written by [`save_julia_checkpoint`](@ref).
 """
 function load_julia_checkpoint(path::AbstractString)
+    validate_checkpoint_input(path)
     open(path, "r") do io
         deserialize(io)
     end
+end
+
+"""
+    unsupported_checkpoint_error(path) -> TrainingError
+
+Build the compatibility-boundary error for checkpoint inputs that are not
+QuantumGraph Julia-native `.jls` checkpoint artifacts.
+"""
+function unsupported_checkpoint_error(path)
+    TrainingError(
+        "validate checkpoint input",
+        String(path),
+        "unsupported checkpoint artifact type; QuantumGraph currently loads Julia-native .jls checkpoints. See docs/migration_compatibility.md for the compatibility boundary.",
+    )
+end
+
+"""
+    checkpoint_compatibility_error(path) -> TrainingError
+
+Alias for [`unsupported_checkpoint_error`](@ref) used by compatibility-facing
+callers and tests.
+"""
+checkpoint_compatibility_error(path) = unsupported_checkpoint_error(path)
+
+"""
+    validate_checkpoint_input(path) -> String
+
+Validate that `path` names a supported QuantumGraph checkpoint artifact.
+
+Supported checkpoint inputs are Julia-native `.jls` files produced by
+[`save_julia_checkpoint`](@ref). Legacy Python/Torch checkpoint files are not
+loaded implicitly; callers must perform an explicit conversion before handing the
+result to QuantumGraph.
+"""
+function validate_checkpoint_input(path::AbstractString)
+    endswith(lowercase(String(path)), ".jls") || throw(unsupported_checkpoint_error(path))
+    return String(path)
 end
 
 """

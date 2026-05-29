@@ -35,7 +35,7 @@ Task 12 — CUDADevice.jl + CUDA validation
 - `MLUtils.DataLoader(...; collate=true)` batches `GNNGraph` samples into a batched `GNNGraph`.
 - Device movement preserves batched graph structure, including `num_graphs`.
 - Model and graph movement use public Flux APIs (`Flux.gpu`) for CUDA preparation.
-- No distributed/DDP/multi-machine setup is initialized or required.
+- Device setup remains local and limited to at most one accelerator.
 - CUDA smoke assertions are gated by `cuda_available()`.
 
 ## BDD test results
@@ -64,7 +64,7 @@ Result: PASS — 258 native unit/integration assertions passed.
 - CUDA.jl contract: availability is checked through `CUDA.functional()` behind `cuda_available()`; simple array fallback movement uses `CUDA.cu`.
 - Flux.jl contract: model and `GNNGraph` movement use `Flux.gpu`, preserving Flux/Adapt-compatible behavior.
 - Training contract: trainer owns shallow batch movement at the batch boundary and does not require graph/model internals to know about CUDA.
-- Distributed contract: DDP/multi-machine setup is explicitly absent and test-visible.
+- Local execution contract: device setup remains limited to CPU or one accelerator.
 
 ## Decisions made
 - `ExecutionDevice` stores backend metadata rather than raw CUDA device handles so CPU-only tests can validate behavior deterministically.

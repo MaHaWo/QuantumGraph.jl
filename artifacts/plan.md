@@ -12,7 +12,6 @@ Migrate the full QuantumGravPy Python library at `/Users/hmack/Development/Quant
 - Preferred stack: `Flux.jl`, `GraphNeuralNetworks.jl`, `Zarr.jl`, Julia YAML support; investigate `Enzyme.jl` viability.
 - Compatibility priority: YAML config and Zarr stores highest; training/evaluation artifacts, tuning outputs, and checkpoints must be planned explicitly.
 - CUDA: important and must be planned/tested.
-- DDP: deferred initially.
 - Testing: BDD specs first, then executable Behavior.jl step definitions plus a separate native Julia test surface. Leaf nodes require unit tests; integration nodes require integration tests. Characterization tests are the oracle; no direct blind port of Python tests.
 - Numeric policy: structural and functional equivalence only for now; exact Torch/PyG-to-Julia numeric tolerances are not required.
 
@@ -140,7 +139,7 @@ QuantumGraph.jl/
 - Outputs: trained model state, checkpoints/config copies, validation/test reports, structural training artifacts.
 - Failure modes: invalid config schema, missing data paths, unsupported CUDA/backend, checkpoint write failures.
 - Artifact contract: file inventory and schemas matter; exact stochastic metrics do not.
-- Acceptance: BDD for initialization, dataloader preparation, training loop structural outputs, checkpoint inventory, test/validation report schema; characterization C025 and CUDA requirement. DDP C026 is documented deferred.
+- Acceptance: BDD for initialization, dataloader preparation, training loop structural outputs, checkpoint inventory, test/validation report schema; characterization C025 and CUDA requirement.
 
 ### Contract H — Tuning Boundary
 - Provider: `src/Tuning.jl`
@@ -288,17 +287,17 @@ Serialization/deserialization ownership:
     - Changes: design device selection and GPU transfer contracts for data/model/training; gate GPU tests by availability.
     - node_type: `integration`
     - dependency_interfaces: CUDA.jl device availability and array transfer API; Flux.jl GPU adaptation; GraphNeuralNetworks.jl graph data GPU support; dataset/model/training contracts from Tasks 6, 8, and 11.
-    - Acceptance criteria: Behavior.jl spec `specs/cuda-device.feature` passes; native integration test `test/integration/test_cuda_device.jl` always passes CPU/no-CUDA behavior and runs gated CUDA smoke assertions when CUDA is available; tests verify no DDP requirement.
+    - Acceptance criteria: Behavior.jl spec `specs/cuda-device.feature` passes; native integration test `test/integration/test_cuda_device.jl` always passes CPU/no-CUDA behavior and runs gated CUDA smoke assertions when CUDA is available.
     - Boundary: Sequential after Tasks 6, 8, 11.
     - Open validation: Flux.jl + GraphNeuralNetworks.jl CUDA support and `Enzyme.jl` compatibility.
 
-13. **Document deferred DDP and checkpoint compatibility strategy**: Make omissions explicit and test non-accidental behavior.
+13. **Document checkpoint compatibility strategy**: Make artifact compatibility boundaries explicit and test non-accidental behavior.
     - File: `/Users/hmack/Development/QuantumGraph.jl/docs/migration_compatibility.md`
     - File: `/Users/hmack/Development/QuantumGraph.jl/test/unit/test_training.jl`
-    - Changes: document DDP deferral, Torch checkpoint limitations/conversion strategy, and artifact compatibility support matrix.
+    - Changes: document Torch checkpoint limitations/conversion strategy and artifact compatibility support matrix.
     - node_type: `integration`
     - dependency_interfaces: Training artifact inventory from Task 11; public export surface from Task 14 when finalized; documentation/test convention for intentionally absent APIs.
-    - Acceptance criteria: Behavior.jl spec `specs/migration-compatibility.feature` passes; native integration test `test/integration/test_migration_compatibility.jl` verifies documentation lists supported/deferred artifact types, DDP APIs are absent/deferred intentionally, and checkpoint compatibility limits are explicit rather than partially broken.
+    - Acceptance criteria: Behavior.jl spec `specs/migration-compatibility.feature` passes; native integration test `test/integration/test_migration_compatibility.jl` verifies documentation lists supported/deferred artifact types and checkpoint compatibility limits are explicit rather than partially broken.
     - Boundary: Sequential after Task 11.
 
 14. **Assemble public exports and documentation**: Expose stable Julia library surface and package docs.
@@ -368,12 +367,12 @@ Task 1  Package skeleton + test harness
 Task 11 Training.jl
 ├── Task 10 Tuning.jl
 ├── Task 12 CUDADevice.jl + CUDA validation
-├── Task 13 DDP/checkpoint compatibility docs
+├── Task 13 checkpoint compatibility docs
 └── Task 14 Public exports + docs
 
 Task 10 Tuning.jl ──> Task 14 Public exports + docs
 Task 12 CUDADevice.jl ──> Task 14 Public exports + docs
-Task 13 DDP/checkpoint compatibility docs ──> Task 14 Public exports + docs
+Task 13 checkpoint compatibility docs ──> Task 14 Public exports + docs
 Task 14 Public exports + docs ──> Task 15 Full migration verification
 ```
 
@@ -407,7 +406,6 @@ Bottom-up implementation order:
 | `evaluate.py` | `src/Evaluation.jl` | Report schemas and metric loop. |
 | `early_stopping.py` | `src/EarlyStopping.jl` | State and decision logic. |
 | `train.py` | `src/Training.jl` | Single-process orchestration. |
-| `train_ddp.py` | Deferred; maybe future `src/DistributedTraining.jl` | DDP not in initial scope; document deferral. |
 | `QGTune/tune.py` | `src/Tuning.jl` | Search-space/reference/best-config behavior. |
 
 ## Julia Testing Approach and Commands
@@ -468,7 +466,7 @@ BDD workflow:
 - `/Users/hmack/Development/QuantumGraph.jl/test/integration/*.jl` - native Julia integration tests for integration nodes.
 - `/Users/hmack/Development/QuantumGraph.jl/test/fixtures/configs/` - YAML config fixtures.
 - `/Users/hmack/Development/QuantumGraph.jl/test/fixtures/zarr/` - Python-created Zarr fixtures.
-- `/Users/hmack/Development/QuantumGraph.jl/docs/migration_compatibility.md` - artifact compatibility, DDP deferral, checkpoint strategy.
+- `/Users/hmack/Development/QuantumGraph.jl/docs/migration_compatibility.md` - artifact compatibility and checkpoint strategy.
 
 ## Dependencies
 - Task 1 blocks all code implementation.
@@ -493,6 +491,5 @@ BDD workflow:
 - PyTorch/PyG graph batching and Julia graph batching may differ; define graph sample and batch contracts before model/training implementation.
 - Torch binary checkpoints are likely not directly usable from Julia; plan native Julia checkpoints plus explicit compatibility/conversion strategy.
 - CUDA support is required but environment-sensitive; keep GPU tests gated and add a clear CUDA validation step.
-- DDP is deferred; documentation must prevent accidental partial or misleading support.
 - Mutation semantics in config and early stopping may differ in Julia; BDD should lock user-visible behavior rather than implementation aliasing.
 - Exact numeric comparisons are intentionally out of scope; reviewers must not treat non-identical metrics as failures unless structural behavior changes.
