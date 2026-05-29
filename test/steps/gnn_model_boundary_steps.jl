@@ -1,3 +1,6 @@
+# These Behavior.jl step definitions back specs/gnn-model-boundary.feature. They
+# test the public GNN model boundary with scenario context for construction,
+# active task outputs, embedding paths, metadata persistence, and config errors.
 using Behavior
 
 function qg_model_exports()

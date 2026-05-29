@@ -1,3 +1,6 @@
+# These Behavior.jl step definitions back specs/model-components.feature. They
+# test reusable component behavior through exported capability checks, scenario
+# fixtures for block construction/application, residuals, activations, and errors.
 using Behavior
 import QuantumGraph
 

@@ -1,3 +1,6 @@
+# These integration tests cover configuration parsing and object resolution.
+# They load YAML tag fixtures, expand sweeps and ranges, resolve references and
+# registered Julia objects, and assert that malformed configurations fail clearly.
 using Test
 using QuantumGraph
 

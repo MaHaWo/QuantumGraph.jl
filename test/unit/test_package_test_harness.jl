@@ -1,3 +1,6 @@
+# These unit tests cover the package skeleton and local test harness contract.
+# They check that QuantumGraph imports as a library module, keeps CLI entry
+# points out of the public module, and preserves the expected test directories.
 using Test
 using QuantumGraph
 

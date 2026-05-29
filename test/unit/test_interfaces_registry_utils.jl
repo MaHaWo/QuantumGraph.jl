@@ -1,3 +1,6 @@
+# These unit tests cover the public registry and shared configuration utilities.
+# They exercise direct registration/resolution, metadata round-tripping, nested
+# config-path reads and writes, and public error reporting for invalid values.
 using Test
 using QuantumGraph
 

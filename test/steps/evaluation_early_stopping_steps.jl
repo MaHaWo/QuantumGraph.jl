@@ -1,3 +1,6 @@
+# These Behavior.jl step definitions back specs/evaluation-early-stopping.feature.
+# They test evaluation and stopping behavior through exported capability checks,
+# DataFrame report expectations, monitor-task contexts, and stop/continue states.
 using Behavior
 
 function qg_eval_exports()

@@ -1,3 +1,6 @@
+# These Behavior.jl step definitions back specs/package-test-harness.feature.
+# They test package harness expectations through repository/package inspection,
+# import checks, approved spec discovery, and native/BDD test entry points.
 using Behavior
 
 const QG_HARNESS_ROOT = abspath(joinpath(@__DIR__, "..", ".."))

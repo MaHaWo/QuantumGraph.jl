@@ -1,3 +1,6 @@
+# These Behavior.jl step definitions back specs/config-object-resolution.feature.
+# They test configuration semantics through Gherkin scenarios by loading YAML
+# fixtures, expanding sweeps/ranges, resolving references, and checking failures.
 using Behavior
 import QuantumGraph
 

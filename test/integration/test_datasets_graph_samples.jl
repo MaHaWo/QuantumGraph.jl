@@ -1,3 +1,6 @@
+# These integration tests cover dataset sizing, indexing, and graph batching.
+# They exercise public dataset helpers with dictionary and empty-dataset
+# fixtures, then verify GraphNeuralNetworks batches are collated as expected.
 using Test
 using QuantumGraph
 using GraphNeuralNetworks

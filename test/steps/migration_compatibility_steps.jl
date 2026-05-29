@@ -1,3 +1,6 @@
+# These Behavior.jl step definitions back specs/migration-compatibility.feature.
+# They test migration promises by inspecting docs and exercising checkpoint
+# validation/error helpers for supported Julia and unsupported legacy artifacts.
 using Behavior
 
 const QG_COMPAT_ROOT = abspath(joinpath(@__DIR__, "..", ".."))

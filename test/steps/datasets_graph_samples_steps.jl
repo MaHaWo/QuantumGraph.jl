@@ -1,3 +1,6 @@
+# These Behavior.jl step definitions back specs/datasets-graph-samples.feature.
+# They test dataset and graph-sample behavior with temporary Zarr stores, lazy
+# sample reads, GraphNeuralNetworks-compatible values, and documented boundaries.
 using Behavior
 using Zarr
 using MLUtils

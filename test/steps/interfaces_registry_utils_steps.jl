@@ -1,3 +1,6 @@
+# These Behavior.jl step definitions back specs/interfaces-registry-utils.feature.
+# They test shared interface utilities through registry fixtures, metadata
+# extraction/reconstruction, nested config paths, and public validation errors.
 using Behavior
 
 function qg_interfaces_import!()

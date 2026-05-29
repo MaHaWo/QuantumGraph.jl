@@ -1,3 +1,6 @@
+# These integration tests cover reusable model component construction. They
+# build blocks from config dictionaries, apply them to tensors and sample
+# wrappers, validate metadata, custom activations, and invalid block errors.
 using Test
 using QuantumGraph
 using Flux

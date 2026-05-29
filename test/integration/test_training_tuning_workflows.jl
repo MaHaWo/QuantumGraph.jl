@@ -1,3 +1,6 @@
+# These integration tests cover training orchestration and tuning utilities.
+# They run deterministic trainers, inspect written reports/checkpoints, exercise
+# Flux optimizer updates and early stopping, then validate Optuna search helpers.
 using Test
 using QuantumGraph
 using DataFrames

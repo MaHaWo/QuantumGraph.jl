@@ -1,3 +1,6 @@
+# These integration tests cover migration-compatibility messaging and checkpoint
+# validation. They inspect README/docs promises and verify that Julia-native
+# checkpoints pass while legacy Torch/Python artifacts produce guided errors.
 using Test
 using QuantumGraph
 

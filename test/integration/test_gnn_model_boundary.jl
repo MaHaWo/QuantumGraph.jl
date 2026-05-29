@@ -1,3 +1,6 @@
+# These integration tests cover the composite GNN model boundary. They construct
+# task-headed models from config dictionaries, exercise pooling and latent
+# embeddings, verify metadata persistence, and assert incompatible configs error.
 using Test
 using QuantumGraph
 using GraphNeuralNetworks

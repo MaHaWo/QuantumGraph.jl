@@ -1,3 +1,6 @@
+# These integration tests cover the public library surface contract. They inspect
+# exported names by capability, require specific Julia-facing APIs, reject Python
+# or CLI-shaped names, and verify documentation describes library-first usage.
 using Test
 using QuantumGraph
 

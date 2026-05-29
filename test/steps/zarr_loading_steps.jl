@@ -1,3 +1,6 @@
+# These Behavior.jl step definitions back specs/zarr-loading.feature. They test
+# Zarr access through temporary stores, recursive loading, fixture-array reads,
+# missing-path errors, unsupported layouts, and lazy sample access.
 using Behavior
 using Zarr
 import QuantumGraph

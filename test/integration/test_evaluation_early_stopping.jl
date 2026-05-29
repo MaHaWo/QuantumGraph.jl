@@ -1,3 +1,6 @@
+# These integration tests cover evaluation reports and early-stopping state.
+# They run deterministic model/batch fixtures through batch and iterator
+# evaluators, validate monitor metric handling, and step early-stopping decisions.
 using Test
 using QuantumGraph
 using DataFrames

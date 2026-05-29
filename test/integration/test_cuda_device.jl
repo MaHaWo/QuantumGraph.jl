@@ -1,3 +1,6 @@
+# These integration tests cover the single-device execution boundary. They
+# validate CPU/CUDA device selection, graph/model movement helpers, trainer
+# device wiring, and hardware-gated CUDA array behavior when CUDA is available.
 using Test
 using QuantumGraph
 using CUDA

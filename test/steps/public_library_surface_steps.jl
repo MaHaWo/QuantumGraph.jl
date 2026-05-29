@@ -1,3 +1,6 @@
+# These Behavior.jl step definitions back specs/public-library-surface.feature.
+# They test the library-facing API by importing QuantumGraph, checking exported
+# capabilities, inspecting docs/metadata, and confirming import has no side effects.
 using Behavior
 
 const QG_REPO_ROOT = abspath(joinpath(@__DIR__, "..", ".."))

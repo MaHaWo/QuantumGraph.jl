@@ -1,3 +1,6 @@
+# These unit tests cover the Zarr loading error boundary. They use missing
+# temporary paths to confirm store opening, validation, and recursive loading
+# all fail with QuantumGraph-specific user-visible errors.
 using Test
 using QuantumGraph
 

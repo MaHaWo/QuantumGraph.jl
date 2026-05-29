@@ -1,3 +1,6 @@
+# This is the package test entry point. It verifies the native unit tests,
+# native integration tests, and approved Behavior.jl acceptance specs by
+# loading each test directory in a deterministic order before running BDD specs.
 using Test
 using Behavior
 using QuantumGraph

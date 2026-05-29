@@ -1,3 +1,6 @@
+# These Behavior.jl step definitions back specs/cuda-device.feature. They test
+# the device-selection contract through exported capability checks and scenario
+# context for CPU, optional single-accelerator, and invalid accelerator requests.
 using Behavior
 
 function qg_device_exports()

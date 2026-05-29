@@ -1,3 +1,6 @@
+# These Behavior.jl step definitions back specs/training-tuning-workflows.feature.
+# They test training and tuning contracts via exported capability checks and
+# scenario context for trainers, artifacts, early stopping, and Optuna helpers.
 using Behavior
 
 function qg_workflow_exports()
