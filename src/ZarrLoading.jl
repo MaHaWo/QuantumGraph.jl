@@ -1,4 +1,5 @@
 using Zarr
+import ZipFile
 
 export ZarrLoadingError,
     LazyZarrStore,
@@ -79,11 +80,46 @@ Open an existing Zarr store through Zarr.jl.
 # Throws
 - `ZarrLoadingError`: If `path` does not exist or cannot be opened as a Zarr store.
 """
+_is_zip_store(path::AbstractString) = endswith(lowercase(String(path)), ".zip")
+
+function _safe_zip_destination(root::AbstractString, name::AbstractString)
+    destination = normpath(joinpath(root, split(name, '/')...))
+    startswith(destination, normpath(root) * string(Base.Filesystem.path_separator)) ||
+        throw(ZarrLoadingError("open Zarr store", String(name), "zip entry escapes extraction directory"))
+    destination
+end
+
+function _extract_zip_store(path::AbstractString)
+    extraction_root = mktempdir()
+    reader = ZipFile.Reader(String(path))
+    try
+        for file in reader.files
+            isempty(file.name) && continue
+            destination = _safe_zip_destination(extraction_root, file.name)
+            if endswith(file.name, "/")
+                mkpath(destination)
+            else
+                mkpath(dirname(destination))
+                open(destination, "w") do io
+                    write(io, read(file))
+                end
+            end
+        end
+    finally
+        close(reader)
+    end
+
+    entries = filter(name -> !startswith(name, "."), readdir(extraction_root; join = true))
+    zarr_roots = filter(isdir, entries)
+    return length(zarr_roots) == 1 ? only(zarr_roots) : extraction_root
+end
+
 function open_zarr_store(path::AbstractString)
     store_path = String(path)
     ispath(store_path) || throw(ZarrLoadingError("open Zarr store", store_path, "missing store path"))
+    zarr_path = _is_zip_store(store_path) ? _extract_zip_store(store_path) : store_path
     try
-        root = Zarr.zopen(store_path)
+        root = Zarr.zopen(zarr_path)
         root isa Zarr.ZGroup || throw(ZarrLoadingError("open Zarr store", store_path, "expected a Zarr group at store root"))
         return root
     catch err

@@ -15,6 +15,7 @@ Optuna = "a5d0552b-b2dc-4f08-ac5c-85ca7d701b92"
 Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 Zarr = "0a941bbe-ad1d-11e8-39d9-ab76183a1d99"
+ZipFile = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
 
 [compat]
 Behavior = "0.5"
@@ -26,6 +27,7 @@ MLUtils = "0.4.8"
 Optimisers = "0.4"
 Optuna = "0.2.1"
 Zarr = "0.10.0"
+ZipFile = "0.10"
 julia = "1"
 
 [extras]

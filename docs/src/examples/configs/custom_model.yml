@@ -1,0 +1,3 @@
+# Registry-backed object references can live in normal config files.
+model_constructor: !pyobject-equivalent Docs.ResidualMLP
+width: !sweep [4, 8]

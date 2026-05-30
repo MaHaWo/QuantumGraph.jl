@@ -1,0 +1,14 @@
+[deps]
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
+MLUtils = "f1d291b0-491e-4a28-83b9-f70985020b54"
+Optimisers = "3bd65402-5787-11e9-1adc-39752487f4e2"
+Optuna = "a5d0552b-b2dc-4f08-ac5c-85ca7d701b92"
+QuantumGraph = "5c1c5ffa-3a8b-4a26-b46c-d7944ad1c61c"
+Zarr = "0a941bbe-ad1d-11e8-39d9-ab76183a1d99"
+ZipFile = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
+
+[compat]
+Documenter = "1"
+ZipFile = "0.10"
